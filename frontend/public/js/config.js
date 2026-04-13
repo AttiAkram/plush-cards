@@ -9,4 +9,4 @@
  * After deploying the backend to Railway, paste the URL here and push — Vercel
  * will automatically redeploy the frontend with the correct value.
  */
-export const BACKEND_URL = '';
+export const BACKEND_URL = 'https://plush-cards-production.up.railway.app';
