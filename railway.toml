@@ -1,6 +1,9 @@
 [build]
-# Build only the backend — Railway deploys from the project root
+# Dockerfile path and context are both relative to the repo root.
+# Setting dockerContext = "backend" makes COPY instructions resolve
+# inside backend/ instead of the repo root.
 dockerfilePath = "backend/Dockerfile"
+dockerContext  = "backend"
 
 [deploy]
 healthcheckPath    = "/api/health"
