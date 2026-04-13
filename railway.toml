@@ -1,9 +1,7 @@
 [build]
-# Dockerfile path and context are both relative to the repo root.
-# Setting dockerContext = "backend" makes COPY instructions resolve
-# inside backend/ instead of the repo root.
-dockerfilePath = "backend/Dockerfile"
-dockerContext  = "backend"
+# Root-level Dockerfile — build context is the repo root (Railway default).
+# backend/Dockerfile is kept for Docker Compose (context = ./backend).
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath    = "/api/health"
