@@ -60,11 +60,19 @@ function initLoginForm() {
 
     if (!username || !password) return showError('Compila tutti i campi');
 
-    const res = await api.post('/api/login', { username, password });
-    if (res.error) return showError(res.error);
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Accesso...';
 
-    saveSession(res.token, res.username);
-    enterLobby();
+    try {
+      const res = await api.post('/api/login', { username, password });
+      if (res.error) return showError(res.error);
+      saveSession(res.token, res.username);
+      enterLobby();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Accedi';
+    }
   });
 }
 
@@ -80,11 +88,19 @@ function initRegisterForm() {
     if (!username || !password) return showError('Compila tutti i campi');
     if (password !== confirm)   return showError('Le password non corrispondono');
 
-    const res = await api.post('/api/register', { username, password });
-    if (res.error) return showError(res.error);
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Registrazione...';
 
-    saveSession(res.token, res.username);
-    enterLobby();
+    try {
+      const res = await api.post('/api/register', { username, password });
+      if (res.error) return showError(res.error);
+      saveSession(res.token, res.username);
+      enterLobby();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "Inizia l'Avventura";
+    }
   });
 }
 

@@ -20,12 +20,19 @@ function authHeaders() {
  * @returns {Promise<T>}
  */
 export async function post(path, body = {}) {
-  const res = await fetch(BACKEND_URL + path, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body:    JSON.stringify(body),
-  });
-  return res.json();
+  try {
+    const res  = await fetch(BACKEND_URL + path, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    // Normalise HTTP error codes into { error } shape
+    if (!res.ok && !data.error) data.error = `Errore ${res.status}`;
+    return data;
+  } catch {
+    return { error: 'Impossibile raggiungere il server. Riprova.' };
+  }
 }
 
 /**
@@ -35,6 +42,10 @@ export async function post(path, body = {}) {
  * @returns {Promise<T>}
  */
 export async function get(path) {
-  const res = await fetch(BACKEND_URL + path, { headers: authHeaders() });
-  return res.json();
+  try {
+    const res = await fetch(BACKEND_URL + path, { headers: authHeaders() });
+    return await res.json();
+  } catch {
+    return { error: 'Impossibile raggiungere il server. Riprova.' };
+  }
 }

@@ -8,46 +8,52 @@
   padding:         20px;
 }
 
-/* Decorative floating cards — hidden on this minimal theme */
 .floating-cards { display: none; }
 
 /* Wrapper */
-.auth-wrapper   { width: 100%; max-width: 400px; }
+.auth-wrapper   { width: 100%; max-width: 380px; }
 .auth-container { position: relative; }
 
 /* Logo */
-.logo-area    { text-align: center; margin-bottom: 24px; }
+.logo-area {
+  text-align:    center;
+  margin-bottom: 20px;
+}
 
 .logo-icon {
-  width:   44px;
-  height:  44px;
-  margin:  0 auto 10px;
+  width:  40px;
+  height: 40px;
+  margin: 0 auto 10px;
 }
 
 .logo-icon svg { width: 100%; height: 100%; }
 
 .logo-title {
-  font-size:      20px;
+  font-size:      18px;
   font-weight:    700;
   color:          var(--c-text);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
 }
 
 .logo-subtitle, .logo-sub {
   color:       var(--c-sub);
-  font-size:   13px;
+  font-size:   12px;
   font-weight: 400;
-  margin-top:  3px;
+  margin-top:  4px;
 }
 
-/* Auth card */
-.auth-box {
+/* Auth card — override .glass leftover */
+.auth-box,
+.auth-box.glass {
   background:     var(--c-white);
   border-radius:  var(--radius);
-  padding:        24px;
+  padding:        20px;
   display:        flex;
   flex-direction: column;
-  gap:            16px;
+  gap:            14px;
+  /* override any glass styles */
+  backdrop-filter: none;
+  border: none;
 }
 
 /* Tabs */
@@ -73,9 +79,27 @@
   background:  var(--c-white);
   color:       var(--c-text);
   font-weight: 600;
-  box-shadow:  0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow:  0 1px 3px rgba(0,0,0,0.08);
 }
 
 /* Tab panes */
-.tab-pane        { display: none; flex-direction: column; gap: 12px; }
-.tab-pane.active { display: flex; }
+.tab-pane        { display: none; }
+.tab-pane.active { display: flex; flex-direction: column; gap: 12px; }
+
+/* Form layout — fields stacked with consistent gap */
+.tab-pane form {
+  display:        flex;
+  flex-direction: column;
+  gap:            12px;
+}
+
+/* Submit button: a little breathing room above */
+.tab-pane form .btn-full {
+  margin-top: 4px;
+}
+
+/* Error message — always visible area so layout doesn't jump */
+#auth-error.error-msg {
+  min-height: 20px;
+  text-align: center;
+}
