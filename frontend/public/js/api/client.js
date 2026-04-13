@@ -3,7 +3,8 @@
  * Automatically attaches the Bearer token from the store.
  */
 
-import { getState } from '../state/store.js';
+import { getState }    from '../state/store.js';
+import { BACKEND_URL } from '../config.js';
 
 /** @returns {HeadersInit} */
 function authHeaders() {
@@ -19,7 +20,7 @@ function authHeaders() {
  * @returns {Promise<T>}
  */
 export async function post(path, body = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(BACKEND_URL + path, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body:    JSON.stringify(body),
@@ -34,6 +35,6 @@ export async function post(path, body = {}) {
  * @returns {Promise<T>}
  */
 export async function get(path) {
-  const res = await fetch(path, { headers: authHeaders() });
+  const res = await fetch(BACKEND_URL + path, { headers: authHeaders() });
   return res.json();
 }

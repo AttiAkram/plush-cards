@@ -5,6 +5,7 @@ const { socketAuth }                             = require('./middleware');
 const { registerRoomHandlers, handleLeaveRoom }  = require('./handlers/room');
 const { registerGameHandlers }                   = require('./handlers/game');
 const store                                      = require('../store');
+const { FRONTEND_URL }                           = require('../config');
 
 /**
  * Attach a Socket.io server to an existing HTTP server.
@@ -14,7 +15,7 @@ const store                                      = require('../store');
  */
 function createSocketServer(httpServer) {
   const io = new Server(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: { origin: FRONTEND_URL, methods: ['GET', 'POST'] },
   });
 
   io.use(socketAuth);

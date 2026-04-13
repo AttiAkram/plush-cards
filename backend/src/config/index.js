@@ -8,6 +8,11 @@ module.exports = {
   PORT:             parseInt(process.env.PORT, 10) || 3000,
   NODE_ENV:         process.env.NODE_ENV || 'development',
 
+  // CORS — set FRONTEND_URL on Railway to your Vercel domain, e.g.:
+  //   https://plush-cards.vercel.app
+  // Leave empty to allow all origins (fine during development).
+  FRONTEND_URL:     process.env.FRONTEND_URL || '*',
+
   // Auth
   BCRYPT_ROUNDS:    10,
 

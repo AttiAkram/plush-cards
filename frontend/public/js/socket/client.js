@@ -9,11 +9,12 @@
  * Import the `io` ESM build served by the backend via nginx proxy.
  */
 
-// The socket.io server serves its own ESM client at this path.
-import { io } from '/socket.io/socket.io.esm.min.js';
+// socket.io 4.x ESM client — loaded from CDN (works on every environment).
+import { io } from 'https://cdn.socket.io/4.7.2/socket.io.esm.min.js';
 
 import { getState, setSocket, getSocket } from '../state/store.js';
 import { emit as busEmit }                from '../events/emitter.js';
+import { BACKEND_URL }                    from '../config.js';
 
 // ── Connection ────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,10 @@ import { emit as busEmit }                from '../events/emitter.js';
 export function connectSocket() {
   if (getSocket()?.connected) return;
 
-  const socket = io({ auth: { token: getState().token } });
+  // BACKEND_URL = '' → same origin (Docker/nginx); non-empty → Railway URL
+  const socket = BACKEND_URL
+    ? io(BACKEND_URL, { auth: { token: getState().token } })
+    : io({ auth: { token: getState().token } });
   setSocket(socket);
 
   socket.on('connect_error', err => {
