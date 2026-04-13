@@ -24,16 +24,21 @@ export function clearSession() {
 
 // ── Error display ──────────────────────────────────────────────────────────────
 
-function showError(message) {
-  const el = $('auth-error');
+function showError(message, id = 'auth-error') {
+  const el = $(id);
+  if (!el) return;
   el.textContent = message;
-  // Re-trigger animation by toggling the class
   el.classList.remove('shake');
-  void el.offsetWidth; // reflow
+  void el.offsetWidth;
   el.classList.add('shake');
 }
 
-function clearError() { $('auth-error').textContent = ''; }
+function clearError() {
+  ['auth-error', 'auth-error-reg'].forEach(id => {
+    const el = $(id);
+    if (el) el.textContent = '';
+  });
+}
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
 
@@ -58,20 +63,20 @@ function initLoginForm() {
     const username = $('login-user').value.trim();
     const password = $('login-pass').value;
 
-    if (!username || !password) return showError('Compila tutti i campi');
+    if (!username || !password) return showError('Compila tutti i campi', 'auth-error');
 
     const btn = e.target.querySelector('button[type="submit"]');
     btn.disabled = true;
-    btn.textContent = 'Accesso...';
+    btn.textContent = 'Accesso in corso...';
 
     try {
       const res = await api.post('/api/login', { username, password });
-      if (res.error) return showError(res.error);
+      if (res.error) return showError(res.error, 'auth-error');
       saveSession(res.token, res.username);
       enterLobby();
     } finally {
       btn.disabled = false;
-      btn.innerHTML = 'Accedi';
+      btn.textContent = 'Accedi';
     }
   });
 }
@@ -85,21 +90,21 @@ function initRegisterForm() {
     const password = $('reg-pass').value;
     const confirm  = $('reg-pass2').value;
 
-    if (!username || !password) return showError('Compila tutti i campi');
-    if (password !== confirm)   return showError('Le password non corrispondono');
+    if (!username || !password) return showError('Compila tutti i campi', 'auth-error-reg');
+    if (password !== confirm)   return showError('Le password non corrispondono', 'auth-error-reg');
 
     const btn = e.target.querySelector('button[type="submit"]');
     btn.disabled = true;
-    btn.textContent = 'Registrazione...';
+    btn.textContent = 'Registrazione in corso...';
 
     try {
       const res = await api.post('/api/register', { username, password });
-      if (res.error) return showError(res.error);
+      if (res.error) return showError(res.error, 'auth-error-reg');
       saveSession(res.token, res.username);
       enterLobby();
     } finally {
       btn.disabled = false;
-      btn.innerHTML = "Inizia l'Avventura";
+      btn.textContent = 'Registrati';
     }
   });
 }

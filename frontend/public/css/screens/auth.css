@@ -1,29 +1,35 @@
 /* ─────────────────────────────────────────────
-   SCREEN — Auth (login / register)
+   SCREEN — Auth
    ───────────────────────────────────────────── */
 #screen-auth {
   background:      var(--c-bg);
   align-items:     center;
   justify-content: center;
-  padding:         20px;
+  padding:         24px 16px;
+  min-height:      100vh;
 }
 
-.floating-cards { display: none; }
+/* Wrapper — max width centrato */
+.auth-wrapper {
+  width:     100%;
+  max-width: 360px;
+  display:   flex;
+  flex-direction: column;
+  gap:       24px;
+}
 
-/* Wrapper */
-.auth-wrapper   { width: 100%; max-width: 380px; }
-.auth-container { position: relative; }
-
-/* Logo */
+/* ── Logo ─────────────────────────────────── */
 .logo-area {
-  text-align:    center;
-  margin-bottom: 20px;
+  text-align: center;
+  display:    flex;
+  flex-direction: column;
+  align-items: center;
+  gap:         6px;
 }
 
 .logo-icon {
-  width:  40px;
-  height: 40px;
-  margin: 0 auto 10px;
+  width:  36px;
+  height: 36px;
 }
 
 .logo-icon svg { width: 100%; height: 100%; }
@@ -32,47 +38,54 @@
   font-size:      18px;
   font-weight:    700;
   color:          var(--c-text);
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
+  margin:         0;
 }
 
-.logo-subtitle, .logo-sub {
-  color:       var(--c-sub);
+.logo-sub,
+.logo-subtitle {
   font-size:   12px;
   font-weight: 400;
-  margin-top:  4px;
+  color:       var(--c-sub);
+  margin:      0;
 }
 
-/* Auth card — override .glass leftover */
-.auth-box,
-.auth-box.glass {
+/* ── Auth card ────────────────────────────── */
+.auth-box {
   background:     var(--c-white);
   border-radius:  var(--radius);
   padding:        20px;
   display:        flex;
   flex-direction: column;
-  gap:            14px;
-  /* override any glass styles */
-  backdrop-filter: none;
-  border: none;
+  gap:            16px;
 }
 
-/* Tabs */
+/* Override any leftover .glass styles */
+.auth-box.glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* ── Tab bar ──────────────────────────────── */
 .tab-bar {
   display:       flex;
-  gap:           3px;
   background:    var(--c-bg);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   padding:       3px;
+  gap:           2px;
 }
 
 .tab-btn {
   flex:          1;
-  padding:       7px;
+  padding:       8px;
   border-radius: 6px;
-  color:         var(--c-sub);
-  font-weight:   500;
   font-size:     13px;
+  font-weight:   500;
+  color:         var(--c-sub);
   transition:    all var(--t-fast);
+  text-align:    center;
 }
 
 .tab-btn.active {
@@ -82,24 +95,61 @@
   box-shadow:  0 1px 3px rgba(0,0,0,0.08);
 }
 
-/* Tab panes */
+/* ── Tab panes ────────────────────────────── */
 .tab-pane        { display: none; }
-.tab-pane.active { display: flex; flex-direction: column; gap: 12px; }
+.tab-pane.active { display: block; }
 
-/* Form layout — fields stacked with consistent gap */
+/* ── Form ─────────────────────────────────── */
 .tab-pane form {
   display:        flex;
   flex-direction: column;
-  gap:            12px;
+  gap:            10px;
 }
 
-/* Submit button: a little breathing room above */
+/* Labels: small, above input */
+.field-group label {
+  display:     block;
+  font-size:   12px;
+  font-weight: 500;
+  color:       var(--c-sub);
+  margin-bottom: 4px;
+}
+
+/* Inputs */
+.field-group input {
+  display:       block;
+  width:         100%;
+  padding:       9px 12px;
+  font-size:     13px;
+  font-weight:   400;
+  color:         var(--c-text);
+  background:    var(--c-white);
+  border:        1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  transition:    border-color var(--t-fast);
+}
+
+.field-group input:focus {
+  outline:      none;
+  border-color: var(--c-text);
+}
+
+.field-group input::placeholder { color: #C0C0C0; }
+
+/* Error message */
+.error-msg {
+  font-size:   12px;
+  font-weight: 500;
+  color:       var(--c-red);
+  min-height:  16px;
+  text-align:  center;
+}
+
+.error-msg.shake { animation: shake 0.35s ease; }
+
+/* Submit button */
 .tab-pane form .btn-full {
-  margin-top: 4px;
-}
-
-/* Error message — always visible area so layout doesn't jump */
-#auth-error.error-msg {
-  min-height: 20px;
-  text-align: center;
+  margin-top: 2px;
+  font-size:  13px;
+  padding:    10px;
 }
