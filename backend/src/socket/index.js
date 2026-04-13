@@ -27,8 +27,22 @@ function createSocketServer(httpServer) {
     registerGameHandlers(io, socket);
 
     socket.on('disconnect', () => {
-      handleLeaveRoom(io, socket);
-      store.sockets.delete(socket.id);
+      const socketData = store.sockets.get(socket.id);
+      const room = socketData?.roomCode ? store.rooms.get(socketData.roomCode) : null;
+
+      if (room?.status === 'playing' && room.gameState) {
+        // Disconnected mid-game — mark player as disconnected instead of removing
+        const playerState = room.gameState.players[socket.username];
+        if (playerState) playerState.status = 'disconnected';
+        io.to(socketData.roomCode).emit('player_status_changed', {
+          username: socket.username,
+          status:   'disconnected',
+        });
+        store.sockets.delete(socket.id);
+      } else {
+        handleLeaveRoom(io, socket);
+        store.sockets.delete(socket.id);
+      }
     });
   });
 

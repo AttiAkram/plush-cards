@@ -23,10 +23,12 @@ function initGameState(room) {
 
     playerStates[player.username] = {
       username:  player.username,
+      status:    'active',                                    // 'active' | 'disconnected' | 'left'
       nexus:     { hp: NEXUS_HP, maxHp: NEXUS_HP },
       hand,
       field:     Array.from({ length: FIELD_SIZE }, () => null),
       deckCount: Math.floor(deck.length / room.players.length),
+      discard:   [],
     };
   }
 
@@ -36,6 +38,10 @@ function initGameState(room) {
     currentTurn: room.players[0].username,
     turnNumber:  1,
     phase:       'main',
+    zones: {
+      void:     [],
+      absolute: [],
+    },
   };
 }
 

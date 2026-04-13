@@ -222,16 +222,18 @@
 <section id="screen-game" class="screen">
   <div class="game-board" id="game-board">
 
-    <!-- Floating action buttons -->
-    <button class="btn btn-outline btn-sm btn-leave-match" id="btn-leave-match">← Esci</button>
+    <!-- End Turn (floating, bottom-right) -->
     <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
 
-    <!-- Opponents area -->
-    <div class="opponents-area" id="opponents-area"></div>
+    <!-- ── Row 1: Players status bar ─────────────────────────── -->
+    <div class="players-bar" id="players-bar">
+      <button class="btn btn-outline btn-sm btn-leave-match" id="btn-leave-match">← Esci</button>
+      <!-- player pills injected by JS -->
+    </div>
 
-    <!-- Center bar -->
+    <!-- ── Row 2: Center bar (turn + deck + zones) ────────────── -->
     <div class="center-bar">
-      <div class="turn-badge">
+      <div class="turn-badge" id="turn-badge">
         <span id="turn-number">Turno 1</span>
         <span id="turn-player">—</span>
       </div>
@@ -240,6 +242,38 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
         </div>
         <span id="deck-count" class="deck-count">—</span>
+      </div>
+      <!-- Zone stacks -->
+      <div class="zone-stacks">
+        <button class="zone-stack" data-zone="discard" title="Scarti (le tue carte eliminate)">
+          <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3"  y="6"  width="18" height="15" rx="2"/>
+            <rect x="5"  y="4"  width="14" height="14" rx="2" fill="var(--c-white)"/>
+            <rect x="7"  y="2"  width="10" height="14" rx="2" fill="var(--c-white)"/>
+            <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/>
+          </svg>
+          <span class="zone-count" id="zone-count-discard">0</span>
+          <span class="zone-label">Scarti</span>
+        </button>
+        <button class="zone-stack" data-zone="void" title="Vuoto (carte dissolte)">
+          <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 3C8 7 8 17 12 21"/>
+            <path d="M12 3C16 7 16 17 12 21"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+          </svg>
+          <span class="zone-count" id="zone-count-void">0</span>
+          <span class="zone-label">Vuoto</span>
+        </button>
+        <button class="zone-stack" data-zone="absolute" title="Assoluto (rimozione permanente)">
+          <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <circle cx="12" cy="12" r="7" stroke-dasharray="3 2"/>
+            <circle cx="12" cy="12" r="10" stroke-dasharray="2 3" opacity=".5"/>
+          </svg>
+          <span class="zone-count" id="zone-count-absolute">0</span>
+          <span class="zone-label">Assoluto</span>
+        </button>
       </div>
     </div>
 
@@ -296,6 +330,23 @@
     </div>
   </div>
 </section>
+
+<!-- ══════════════════════ TURN BANNER ══════════════════════ -->
+<div id="turn-banner" class="turn-banner hidden">
+  <span id="turn-banner-text">—</span>
+</div>
+
+<!-- ══════════════════════ ZONE PANEL ══════════════════════ -->
+<div id="zone-panel" class="zone-panel hidden" role="dialog" aria-modal="true">
+  <div class="zone-panel-overlay" id="zone-panel-overlay"></div>
+  <div class="zone-panel-box">
+    <div class="zone-panel-header">
+      <span id="zone-panel-title">Scarti</span>
+      <button class="zone-panel-close" id="zone-panel-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div id="zone-panel-cards" class="zone-panel-cards"></div>
+  </div>
+</div>
 
 <!-- ══════════════════════ CARD DETAIL MODAL ══════════════════════ -->
 <div id="card-modal" class="card-modal hidden" role="dialog" aria-modal="true">

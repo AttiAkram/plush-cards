@@ -1,27 +1,27 @@
 /**
- * Game screen — renders the board and handles all interactive mechanics:
- *   • End Turn button (+ Enter hotkey)
- *   • Leave Match button
- *   • Card inspect modal (click hand/field cards; long-press on mobile)
- *   • Drag & Drop from hand to field (HTML5 DnD, event delegation)
- *   • Turn changed / card played socket event handlers
+ * Game screen — all interactive mechanics:
+ *   • Players status bar (replaces opponents-area)
+ *   • Turn changed banner + End Turn pending state
+ *   • Card inspect modal (click / long-press)
+ *   • Drag & Drop hand → field (HTML5 DnD, event delegation)
+ *   • Zone stacks panel (discard / void / absolute)
+ *   • Leave Match
  */
 
 import { $, el, escHtml }                        from '../utils/dom.js';
 import { getState, setState }                     from '../state/store.js';
 import { showScreen }                             from '../router/index.js';
 import { on }                                     from '../events/emitter.js';
-import { createCardEl, createMiniCardEl,
-         creatureArtHtml }                        from '../components/card.js';
+import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
          leaveMatch }                             from '../socket/client.js';
 
 // ── Drag state ────────────────────────────────────────────────────────────────
 
 let draggingCardUid   = null;
-let currentValidSlots = [];   // slot indices declared valid by the server
+let currentValidSlots = [];
 
-// ── Rarity labels (shared) ────────────────────────────────────────────────────
+// ── Rarity labels ─────────────────────────────────────────────────────────────
 
 const RARITY_LABELS = {
   comune: 'Comune', raro: 'Raro', epico: 'Epico',
@@ -35,23 +35,115 @@ function updateNexus(nexus) {
   $('nexus-hp-fill').style.width = `${(nexus.hp / nexus.maxHp) * 100}%`;
 }
 
-// ── Turn info + End Turn button ───────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// PLAYERS BAR
+// ──────────────────────────────────────────────────────────────────────────────
+
+const STATUS_ICONS = {
+  active:       '<span class="ps-dot ps-dot--active"></span>',
+  disconnected: '<span class="ps-dot ps-dot--disc" title="Disconnesso">↯</span>',
+  left:         '<span class="ps-dot ps-dot--left" title="Ha abbandonato">✕</span>',
+};
+
+/**
+ * Render the top player-status bar from the full game state.
+ * Shows a pill per player: avatar, name, HP bar, status, active-turn highlight.
+ */
+function renderPlayersBar(gameState) {
+  const bar  = $('players-bar');
+  // Keep the Leave button (first child), clear the rest
+  const leave = bar.firstElementChild;
+  bar.innerHTML = '';
+  bar.appendChild(leave);
+
+  const me = getState().username;
+
+  for (const username of gameState.turnOrder) {
+    const p       = gameState.players[username];
+    if (!p) continue;
+    const isMe    = username === me;
+    const isTurn  = gameState.currentTurn === username;
+    const status  = p.status ?? 'active';
+    const hpPct   = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+
+    const pill = el('div',
+      `player-pill${isTurn ? ' is-turn' : ''}${isMe ? ' is-me' : ''} status-${status}`);
+
+    pill.innerHTML = `
+      <div class="player-avatar">${escHtml(username[0].toUpperCase())}</div>
+      <div class="player-pill-body">
+        <div class="player-pill-name">${escHtml(username)}${isMe ? ' <span class="you-badge">tu</span>' : ''}</div>
+        <div class="player-pill-hp">
+          <div class="player-hp-bar"><div class="player-hp-fill" style="width:${hpPct}%"></div></div>
+          <span class="player-hp-text">${p.nexus.hp}</span>
+        </div>
+      </div>
+      ${STATUS_ICONS[status] ?? STATUS_ICONS.active}`;
+
+    bar.appendChild(pill);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TURN INFO + END TURN BUTTON
+// ──────────────────────────────────────────────────────────────────────────────
 
 function updateTurnInfo(gameState) {
   const isMe = gameState.currentTurn === getState().username;
   $('turn-number').textContent = `Turno ${gameState.turnNumber}`;
   $('turn-player').textContent = isMe ? 'Turno tuo!' : gameState.currentTurn;
 
-  const badge = document.querySelector('.turn-badge');
+  const badge = $('turn-badge');
   if (badge) badge.classList.toggle('my-turn', isMe);
-
-  $('btn-end-turn').disabled = !isMe;
 }
 
-// ── Card detail modal ─────────────────────────────────────────────────────────
+function setEndTurnPending(pending) {
+  const btn = $('btn-end-turn');
+  if (pending) {
+    btn.disabled   = true;
+    btn.textContent = 'In attesa…';
+    btn.classList.add('pending');
+  } else {
+    btn.classList.remove('pending');
+  }
+}
+
+function updateEndTurnBtn(gameState) {
+  const btn  = $('btn-end-turn');
+  const isMe = gameState.currentTurn === getState().username;
+  btn.disabled    = !isMe;
+  btn.textContent = 'Fine Turno';
+  btn.classList.remove('pending');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TURN CHANGE BANNER
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _bannerTimer;
+
+function showTurnBanner(text) {
+  clearTimeout(_bannerTimer);
+  const banner = $('turn-banner');
+  $('turn-banner-text').textContent = text;
+  banner.classList.remove('hidden', 'banner-hide');
+  // force reflow so the transition fires
+  banner.offsetWidth; // eslint-disable-line no-unused-expressions
+  banner.classList.add('banner-show');
+
+  _bannerTimer = setTimeout(() => {
+    banner.classList.remove('banner-show');
+    banner.classList.add('banner-hide');
+    setTimeout(() => banner.classList.add('hidden'), 400);
+  }, 2400);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CARD DETAIL MODAL
+// ──────────────────────────────────────────────────────────────────────────────
 
 function openCardModal(card) {
-  $('card-modal-art').innerHTML  = creatureArtHtml(card.id, 64);
+  $('card-modal-art').innerHTML    = creatureArtHtml(card.id, 64);
   $('card-modal-name').textContent = card.name;
 
   const rarityEl = $('card-modal-rarity');
@@ -61,51 +153,84 @@ function openCardModal(card) {
   $('card-modal-stats').innerHTML =
     `<span class="cm-stat cm-dmg">⚔ ${card.damage}</span>
      <span class="cm-stat cm-hp">♥ ${card.hp}</span>`;
-
   $('card-modal-desc').textContent = card.description;
   $('card-modal').classList.remove('hidden');
 }
 
-function closeCardModal() {
-  $('card-modal').classList.add('hidden');
-}
+function closeCardModal() { $('card-modal').classList.add('hidden'); }
 
-/**
- * Attach click (desktop) and long-press (mobile) to open the card modal.
- * @param {HTMLElement} cardEl
- * @param {object}      card
- */
 function attachCardInspect(cardEl, card) {
   cardEl.addEventListener('click', () => openCardModal(card));
-
-  let lpTimer;
+  let lp;
   cardEl.addEventListener('touchstart', () => {
-    lpTimer = setTimeout(() => openCardModal(card), 500);
+    lp = setTimeout(() => openCardModal(card), 500);
   }, { passive: true });
-  cardEl.addEventListener('touchend',  () => clearTimeout(lpTimer));
-  cardEl.addEventListener('touchmove', () => clearTimeout(lpTimer));
+  cardEl.addEventListener('touchend',  () => clearTimeout(lp));
+  cardEl.addEventListener('touchmove', () => clearTimeout(lp));
 }
 
-// ── Slot highlight helpers ────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// ZONE STACKS (discard / void / absolute)
+// ──────────────────────────────────────────────────────────────────────────────
 
-function highlightValidSlots() {
-  $('player-field').querySelectorAll('.field-slot').forEach((slotEl, i) => {
-    slotEl.classList.toggle('droppable', currentValidSlots.includes(i));
+const ZONE_TITLES = { discard: 'Scarti', void: 'Vuoto', absolute: 'Assoluto' };
+
+function updateZoneCounts(gameState) {
+  const me = getState().username;
+  // discard: show my own discard count
+  const discardCount = gameState.players[me]?.discard?.length ?? 0;
+  const voidCount    = gameState.zones?.void?.length ?? 0;
+  const absCount     = gameState.zones?.absolute?.length ?? 0;
+
+  $('zone-count-discard').textContent  = discardCount;
+  $('zone-count-void').textContent     = voidCount;
+  $('zone-count-absolute').textContent = absCount;
+}
+
+function openZonePanel(zoneName, gameState) {
+  const me    = getState().username;
+  let cards;
+  if (zoneName === 'discard')  cards = gameState.players[me]?.discard  ?? [];
+  else if (zoneName === 'void')      cards = gameState.zones?.void     ?? [];
+  else                               cards = gameState.zones?.absolute ?? [];
+
+  $('zone-panel-title').textContent = ZONE_TITLES[zoneName] ?? zoneName;
+  const container = $('zone-panel-cards');
+  container.innerHTML = '';
+
+  if (!cards.length) {
+    container.innerHTML = '<p class="zone-panel-empty">Nessuna carta</p>';
+  } else {
+    cards.forEach(card => {
+      const cardEl = createCardEl(card);
+      attachCardInspect(cardEl, card);
+      container.appendChild(cardEl);
+    });
+  }
+
+  $('zone-panel').classList.remove('hidden');
+}
+
+function closeZonePanel() { $('zone-panel').classList.add('hidden'); }
+
+function initZonePanels() {
+  document.querySelectorAll('.zone-stack').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gs = getState().gameState;
+      if (gs) openZonePanel(btn.dataset.zone, gs);
+    });
   });
+  $('zone-panel-close').addEventListener('click', closeZonePanel);
+  $('zone-panel-overlay').addEventListener('click', closeZonePanel);
 }
 
-function clearSlotHighlights() {
-  $('player-field').querySelectorAll('.field-slot').forEach(slotEl => {
-    slotEl.classList.remove('droppable', 'drag-over');
-  });
-}
-
-// ── Hand ──────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// HAND
+// ──────────────────────────────────────────────────────────────────────────────
 
 function renderHand(cards) {
-  const hand    = $('player-hand');
+  const hand = $('player-hand');
   hand.innerHTML = '';
-
   const { gameState, username } = getState();
   const isMyTurn = gameState?.currentTurn === username;
 
@@ -120,11 +245,24 @@ function renderHand(cards) {
   });
 }
 
-// ── Field ─────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// FIELD
+// ──────────────────────────────────────────────────────────────────────────────
+
+function highlightValidSlots() {
+  $('player-field').querySelectorAll('.field-slot').forEach((s, i) => {
+    s.classList.toggle('droppable', currentValidSlots.includes(i));
+  });
+}
+
+function clearSlotHighlights() {
+  $('player-field').querySelectorAll('.field-slot').forEach(s => {
+    s.classList.remove('droppable', 'drag-over');
+  });
+}
 
 function renderField(slots, containerId) {
-  const slotEls = $(containerId).querySelectorAll('.field-slot');
-  slotEls.forEach((slotEl, i) => {
+  $(containerId).querySelectorAll('.field-slot').forEach((slotEl, i) => {
     slotEl.innerHTML = '';
     if (slots[i]) {
       const cardEl = createCardEl(slots[i]);
@@ -139,72 +277,29 @@ function renderField(slots, containerId) {
   });
 }
 
-// ── Opponents ─────────────────────────────────────────────────────────────────
-
-const SVG_HEART_SMALL = `<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-  <path d="M8 14.25l-.345.666a.75.75 0 0 0 .69 0L8 14.25zm0 0C2.561 11.08 1 8.5 1 6.5A4.5 4.5 0 0 1 8 2.75 4.5 4.5 0 0 1 15 6.5c0 2-1.56 4.58-7 7.75z"/>
-</svg>`;
-
-function renderOpponents(gameState) {
-  const area     = $('opponents-area');
-  area.innerHTML = '';
-  const myName   = getState().username;
-
-  for (const username of gameState.turnOrder) {
-    if (username === myName) continue;
-    const opp = gameState.players[username];
-    if (!opp) continue;
-
-    const hpPct    = (opp.nexus.hp / opp.nexus.maxHp) * 100;
-    const isActive = gameState.currentTurn === username;
-    const zone     = el('div', `opponent-zone${isActive ? ' active-turn' : ''}`);
-
-    zone.innerHTML = `
-      <div class="opp-name">${escHtml(username)}</div>
-      <div class="opp-nexus-info">
-        ${SVG_HEART_SMALL} ${opp.nexus.hp}/${opp.nexus.maxHp}
-      </div>
-      <div class="opp-nexus-bar">
-        <div class="opp-nexus-fill" style="width:${hpPct}%"></div>
-      </div>
-      <div class="opp-hand-backs">
-        ${Array.from({ length: opp.hand.length },
-            () => '<div class="card-back-mini"></div>').join('')}
-      </div>`;
-
-    const fieldEl = el('div', 'opp-field');
-    for (const card of opp.field) {
-      if (card) {
-        const miniEl = createMiniCardEl(card);
-        attachCardInspect(miniEl, card);
-        fieldEl.appendChild(miniEl);
-      } else {
-        fieldEl.appendChild(el('div', 'opp-slot-empty'));
-      }
-    }
-    zone.appendChild(fieldEl);
-    area.appendChild(zone);
-  }
-}
-
-// ── Full board render ─────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// FULL BOARD RENDER
+// ──────────────────────────────────────────────────────────────────────────────
 
 export function renderGameBoard(gameState) {
   setState({ gameState });
-
   const myState = gameState.players[getState().username];
   if (!myState) return;
 
+  renderPlayersBar(gameState);
   updateTurnInfo(gameState);
-  $('deck-count').textContent = `${myState.deckCount} carte`;
+  updateEndTurnBtn(gameState);
+  updateZoneCounts(gameState);
 
+  $('deck-count').textContent = `${myState.deckCount} carte`;
   updateNexus(myState.nexus);
   renderHand(myState.hand);
   renderField(myState.field, 'player-field');
-  renderOpponents(gameState);
 }
 
-// ── Drag & Drop (event delegation on containers) ──────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// DRAG & DROP (event delegation)
+// ──────────────────────────────────────────────────────────────────────────────
 
 function initHandDrag() {
   const hand = $('player-hand');
@@ -219,9 +314,7 @@ function initHandDrag() {
     currentValidSlots = [];
     cardEl.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
-
     requestValidSlots(draggingCardUid);
-    // Give the server a tick to respond before highlighting
     setTimeout(highlightValidSlots, 60);
   });
 
@@ -241,11 +334,8 @@ function initFieldDropZones() {
     if (!slotEl || !draggingCardUid) return;
     const i = parseInt(slotEl.dataset.slot, 10);
     if (!currentValidSlots.includes(i)) return;
-
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-
-    // Highlight drop target, keep valid-slot glow on others
     field.querySelectorAll('.field-slot').forEach((s, idx) => {
       s.classList.toggle('droppable', currentValidSlots.includes(idx) && s !== slotEl);
       s.classList.toggle('drag-over', s === slotEl);
@@ -253,11 +343,9 @@ function initFieldDropZones() {
   });
 
   field.addEventListener('dragleave', e => {
-    // Only clear drag-over when leaving the slot entirely
     const slotEl = e.target.closest('.field-slot');
-    if (slotEl && !slotEl.contains(e.relatedTarget)) {
+    if (slotEl && !slotEl.contains(e.relatedTarget))
       slotEl.classList.remove('drag-over');
-    }
   });
 
   field.addEventListener('drop', e => {
@@ -272,39 +360,46 @@ function initFieldDropZones() {
   });
 }
 
-// ── Action buttons + keyboard shortcuts ───────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// ACTION BUTTONS + KEYBOARD
+// ──────────────────────────────────────────────────────────────────────────────
 
 function initGameActions() {
-  // End Turn button
-  $('btn-end-turn').addEventListener('click', () => endTurn());
+  $('btn-end-turn').addEventListener('click', () => {
+    setEndTurnPending(true);
+    endTurn();
+  });
 
-  // Leave Match button
   $('btn-leave-match').addEventListener('click', () => leaveMatch());
 
-  // Card modal close
+  // Card modal
   $('card-modal-close').addEventListener('click', closeCardModal);
   $('card-modal-overlay').addEventListener('click', closeCardModal);
 
-  // Keyboard shortcuts
+  // Keyboard
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeCardModal();
+      closeZonePanel();
       return;
     }
-    // Enter = End Turn (only when modal is closed and it's your turn)
     if (e.key === 'Enter'
         && $('card-modal').classList.contains('hidden')
+        && $('zone-panel').classList.contains('hidden')
         && !$('btn-end-turn').disabled) {
+      setEndTurnPending(true);
       endTurn();
     }
   });
 
-  // Drag & Drop
+  initZonePanels();
   initHandDrag();
   initFieldDropZones();
 }
 
-// ── Socket events ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// SOCKET LISTENERS
+// ──────────────────────────────────────────────────────────────────────────────
 
 function initSocketListeners() {
   on('socket:game_started', gameState => {
@@ -312,45 +407,44 @@ function initSocketListeners() {
     showScreen('game');
   });
 
-  // Another player (or server) advanced the turn
   on('socket:turn_changed', ({ currentTurn, turnNumber }) => {
     const gs = getState().gameState;
     if (!gs) return;
+    const prevTurn = gs.currentTurn;
     gs.currentTurn = currentTurn;
     gs.turnNumber  = turnNumber;
     setState({ gameState: gs });
 
+    const me    = getState().username;
+    const isMe  = currentTurn === me;
+    const label = isMe ? 'Turno tuo!' : `Turno di ${currentTurn}`;
+    showTurnBanner(label);
+
+    renderPlayersBar(gs);
     updateTurnInfo(gs);
-    // Re-render hand to toggle draggable state
-    renderHand(gs.players[getState().username]?.hand ?? []);
-    // Re-render opponents to update active-turn outline
-    renderOpponents(gs);
+    updateEndTurnBtn(gs);
+    // Re-render hand so draggable state flips on turn change
+    renderHand(gs.players[me]?.hand ?? []);
   });
 
-  // A card was played (by anyone)
   on('socket:card_played', ({ playerId, cardUid, slotIndex, card }) => {
     const gs = getState().gameState;
     if (!gs) return;
     const player = gs.players[playerId];
     if (!player) return;
 
-    // Update state
     player.field[slotIndex] = card;
     if (playerId !== getState().username) {
-      // Opponents: remove from their hand array (keeps hand count accurate)
+      // Decrement opponent hand count
       const idx = player.hand.findIndex(c => c.uid === cardUid);
       if (idx !== -1) player.hand.splice(idx, 1);
     }
     setState({ gameState: gs });
 
-    if (playerId === getState().username) {
-      renderField(player.field, 'player-field');
-    } else {
-      renderOpponents(gs);
-    }
+    if (playerId === getState().username) renderField(player.field, 'player-field');
+    else                                  renderPlayersBar(gs); // hand count change
   });
 
-  // Our hand changed after playing a card
   on('socket:hand_updated', ({ hand }) => {
     const gs = getState().gameState;
     if (!gs) return;
@@ -361,29 +455,33 @@ function initSocketListeners() {
     renderHand(hand);
   });
 
-  // Server confirmed valid drop zones during a drag
   on('socket:valid_slots', ({ cardUid, validSlots }) => {
     if (cardUid !== draggingCardUid) return;
     currentValidSlots = validSlots;
     highlightValidSlots();
   });
 
-  // We successfully left the match
+  on('socket:player_status_changed', ({ username, status }) => {
+    const gs = getState().gameState;
+    if (!gs) return;
+    const player = gs.players[username];
+    if (!player) return;
+    player.status = status;
+    setState({ gameState: gs });
+    renderPlayersBar(gs);
+  });
+
   on('socket:left_match', () => {
-    // Dynamic import avoids a circular dep with lobby → game → lobby
     import('./lobby.js').then(({ enterLobby }) => enterLobby());
   });
 
-  // An opponent left — refresh opponent panel
   on('socket:player_left_match', () => {
-    const gs = getState().gameState;
-    if (gs) renderOpponents(gs);
+    // Status change is handled by player_status_changed; nothing extra needed here
   });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/** Register all game screen event listeners. Call once at app startup. */
 export function initGameScreen() {
   initGameActions();
   initSocketListeners();

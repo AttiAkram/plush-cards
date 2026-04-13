@@ -117,13 +117,16 @@ function registerGameHandlers(io, socket) {
   // ── leave_match ───────────────────────────────────────────────────────────────
 
   socket.on('leave_match', () => {
-    const { room, roomCode } = getRoomAndState();
+    const { room, roomCode, gs } = getRoomAndState();
     if (!room) return;
+
+    if (gs?.players[username]) gs.players[username].status = 'left';
 
     socket.leave(roomCode);
     store.sockets.delete(socket.id);
 
     socket.emit('left_match');
+    io.to(roomCode).emit('player_status_changed', { username, status: 'left' });
     io.to(roomCode).emit('player_left_match', { username });
   });
 }
