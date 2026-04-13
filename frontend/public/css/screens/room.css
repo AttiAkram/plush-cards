@@ -1,0 +1,134 @@
+/* ─────────────────────────────────────────────
+   SCREEN — Room (waiting room)
+   ───────────────────────────────────────────── */
+#screen-room { background: var(--c-bg); }
+
+.room-container {
+  padding:        16px;
+  max-width:      480px;
+  margin:         0 auto;
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+.room-header       { text-align: center; }
+.room-header h2    { font-size: 18px; font-weight: 700; color: var(--c-text); }
+.room-host-line    { color: var(--c-sub); font-size: 13px; font-weight: 400; margin-top: 3px; }
+.room-host-line span { color: var(--c-text); font-weight: 600; }
+
+/* Room code card */
+.room-code-card {
+  background:     var(--c-white);
+  border-radius:  var(--radius);
+  padding:        20px;
+  text-align:     center;
+  display:        flex;
+  flex-direction: column;
+  gap:            10px;
+}
+
+.code-label {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             5px;
+  font-weight:     500;
+  font-size:       11px;
+  color:           var(--c-sub);
+  text-transform:  uppercase;
+  letter-spacing:  1.5px;
+}
+
+.code-display {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             12px;
+}
+
+.code-text {
+  font-size:      2rem;
+  font-weight:    700;
+  letter-spacing: 8px;
+  color:          var(--c-text);
+}
+
+.code-hint { font-size: 12px; color: var(--c-sub); }
+
+/* Player list */
+.players-box {
+  background:     var(--c-white);
+  border-radius:  var(--radius);
+  padding:        16px;
+  display:        flex;
+  flex-direction: column;
+  gap:            12px;
+}
+
+.players-box h3 {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  font-size:   14px;
+  font-weight: 600;
+  color:       var(--c-text);
+}
+
+.players-list { display: flex; flex-direction: column; gap: 6px; }
+
+.player-row {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  padding:       8px 12px;
+  background:    var(--c-bg);
+  border-radius: var(--radius-sm);
+  animation:     slideInLeft 0.2s ease;
+}
+
+.player-avatar {
+  width:           32px;
+  height:          32px;
+  border-radius:   50%;
+  background:      var(--c-text);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-weight:     600;
+  font-size:       13px;
+  color:           #fff;
+  flex-shrink:     0;
+}
+
+.player-name  { font-size: 13px; font-weight: 500; color: var(--c-text); flex: 1; }
+
+.player-badge {
+  font-size:     10px;
+  font-weight:   600;
+  background:    var(--c-text);
+  color:         #fff;
+  padding:       2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+/* Host controls */
+.host-controls {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            10px;
+}
+
+.start-hint { color: var(--c-sub); font-size: 13px; font-weight: 400; text-align: center; }
+
+/* Waiting message */
+.waiting-msg {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            12px;
+  padding:        16px;
+  color:          var(--c-sub);
+  font-size:      13px;
+}

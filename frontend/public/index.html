@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Plush Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+
+<!-- ══════════════════════ SCREEN: AUTH ══════════════════════ -->
+<section id="screen-auth" class="screen active">
+  <div class="auth-wrapper">
+
+    <!-- Floating decorative mini-cards (CSS-drawn) -->
+    <div class="floating-cards" aria-hidden="true">
+      <div class="float-card fc1"><div class="mini-card-art rarity-epico"></div></div>
+      <div class="float-card fc2"><div class="mini-card-art rarity-leggendario"></div></div>
+      <div class="float-card fc3"><div class="mini-card-art rarity-mitico"></div></div>
+      <div class="float-card fc4"><div class="mini-card-art rarity-raro"></div></div>
+      <div class="float-card fc5"><div class="mini-card-art rarity-comune"></div></div>
+    </div>
+
+    <div class="auth-container">
+      <div class="logo-area">
+        <!-- Logo SVG: plush star / sparkle -->
+        <div class="logo-icon">
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 4L27.5 16.5H40L30 24.5L33.5 37L24 29L14.5 37L18 24.5L8 16.5H20.5L24 4Z" fill="url(#logoGrad)" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+            <circle cx="24" cy="24" r="5" fill="white" opacity="0.9"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="8" y1="4" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#e040fb"/>
+                <stop offset="0.5" stop-color="#7c4dff"/>
+                <stop offset="1" stop-color="#ffd740"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="logo-title">Plush Cards</h1>
+        <p class="logo-sub">Il gioco di carte dei peluche magici</p>
+      </div>
+
+      <div class="auth-box glass">
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="login">Accedi</button>
+          <button class="tab-btn" data-tab="register">Registrati</button>
+        </div>
+
+        <!-- Login -->
+        <div id="tab-login" class="tab-pane active">
+          <form id="form-login" autocomplete="off" novalidate>
+            <div class="field-group">
+              <label>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Username
+              </label>
+              <input id="login-user" type="text" placeholder="Il tuo nome..." autocomplete="username">
+            </div>
+            <div class="field-group">
+              <label>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Password
+              </label>
+              <input id="login-pass" type="password" placeholder="La tua password..." autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full btn-bounce">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Entra nel Gioco
+            </button>
+          </form>
+        </div>
+
+        <!-- Register -->
+        <div id="tab-register" class="tab-pane">
+          <form id="form-register" autocomplete="off" novalidate>
+            <div class="field-group">
+              <label>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Username
+              </label>
+              <input id="reg-user" type="text" placeholder="Scegli il tuo nome..." autocomplete="username">
+            </div>
+            <div class="field-group">
+              <label>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Password
+              </label>
+              <input id="reg-pass" type="password" placeholder="Crea la tua password..." autocomplete="new-password">
+            </div>
+            <div class="field-group">
+              <label>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Conferma Password
+              </label>
+              <input id="reg-pass2" type="password" placeholder="Ripeti la password..." autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-secondary btn-full btn-bounce">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Inizia l'Avventura
+            </button>
+          </form>
+        </div>
+
+        <div id="auth-error" class="error-msg"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ SCREEN: LOBBY ══════════════════════ -->
+<section id="screen-lobby" class="screen">
+  <nav class="navbar glass">
+    <div class="nav-brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Plush Cards
+    </div>
+    <div class="nav-user">
+      <span class="nav-username" id="nav-username"></span>
+      <button class="btn btn-sm btn-outline" id="btn-logout">
+        <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Esci
+      </button>
+    </div>
+  </nav>
+
+  <div class="lobby-container">
+    <div class="lobby-hero">
+      <h2>
+        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Stanze
+      </h2>
+      <button class="btn btn-primary btn-bounce" id="btn-open-create">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Crea Stanza
+      </button>
+    </div>
+
+    <!-- Join by code -->
+    <div class="join-box glass">
+      <h3>
+        <svg class="section-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Hai un codice invito?
+      </h3>
+      <div class="join-row">
+        <input id="join-code-input" type="text" placeholder="Es. AB3D7F" maxlength="6" class="code-input">
+        <button class="btn btn-accent btn-bounce" id="btn-join-code">Entra</button>
+      </div>
+    </div>
+
+    <!-- Rooms list -->
+    <div class="rooms-section">
+      <div class="rooms-header">
+        <h3>
+          <svg class="section-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="9" y="3" width="13" height="4" rx="1"/><rect x="2" y="10" width="6" height="4" rx="1"/><rect x="9" y="10" width="13" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><rect x="9" y="17" width="13" height="4" rx="1"/></svg>
+          Stanze Disponibili
+        </h3>
+        <button class="btn btn-sm btn-outline" id="btn-refresh-rooms">
+          <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Aggiorna
+        </button>
+      </div>
+      <div id="rooms-grid" class="rooms-grid"></div>
+      <div id="rooms-empty" class="rooms-empty hidden">
+        <svg class="empty-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p>Nessuna stanza aperta...</p>
+        <p class="empty-sub">Sii il primo a crearne una!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal crea stanza -->
+  <div id="modal-create" class="modal hidden">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-box glass">
+      <h3>
+        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+        Nuova Stanza
+      </h3>
+      <div class="field-group">
+        <label>Nome della stanza</label>
+        <input id="room-name-input" type="text" placeholder="La mia stanza..." maxlength="30">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="btn-cancel-create">Annulla</button>
+        <button class="btn btn-primary btn-bounce" id="btn-confirm-create">Crea</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ SCREEN: ROOM ══════════════════════ -->
+<section id="screen-room" class="screen">
+  <nav class="navbar glass">
+    <button class="btn btn-sm btn-outline" id="btn-leave-room">
+      <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Lascia
+    </button>
+    <div class="nav-brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Plush Cards
+    </div>
+    <div style="width:80px"></div>
+  </nav>
+
+  <div class="room-container">
+    <div class="room-header">
+      <h2 id="room-title">Stanza</h2>
+      <p class="room-host-line">Host: <span id="room-host-name"></span></p>
+    </div>
+
+    <!-- Room code -->
+    <div class="room-code-card glass">
+      <p class="code-label">
+        <svg class="section-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Codice Invito
+      </p>
+      <div class="code-display">
+        <span id="room-code-text" class="code-text">------</span>
+        <button class="btn btn-sm btn-outline" id="btn-copy-code">
+          <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copia
+        </button>
+      </div>
+      <p class="code-hint">Condividi questo codice con gli amici</p>
+    </div>
+
+    <!-- Players -->
+    <div class="players-box glass">
+      <h3>
+        <svg class="section-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Giocatori (<span id="players-count">0</span>/4)
+      </h3>
+      <div id="players-list" class="players-list"></div>
+    </div>
+
+    <!-- Controls -->
+    <div id="host-controls" class="host-controls hidden">
+      <p id="start-hint" class="start-hint">Servono almeno 2 giocatori</p>
+      <button class="btn btn-primary btn-large btn-bounce" id="btn-start-game" disabled>
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Inizia la Partita
+      </button>
+    </div>
+
+    <div id="waiting-msg" class="waiting-msg hidden">
+      <div class="spinner"></div>
+      <p>In attesa che l'host inizi...</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ SCREEN: GAME ══════════════════════ -->
+<section id="screen-game" class="screen">
+  <div class="game-board" id="game-board">
+
+    <!-- Opponents area -->
+    <div class="opponents-area" id="opponents-area"></div>
+
+    <!-- Center bar -->
+    <div class="center-bar">
+      <div class="turn-badge glass">
+        <span id="turn-number">Turno 1</span>
+        <span id="turn-player">—</span>
+      </div>
+      <div class="deck-pile" id="deck-pile" title="Mazzo">
+        <div class="deck-card-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
+        </div>
+        <span id="deck-count" class="deck-count">—</span>
+      </div>
+    </div>
+
+    <!-- Player area -->
+    <div class="player-area" id="player-area">
+      <!-- Field slots -->
+      <div class="field-row" id="player-field">
+        <div class="field-slot" data-slot="0">
+          <svg class="slot-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <div class="field-slot" data-slot="1">
+          <svg class="slot-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <div class="field-slot" data-slot="2">
+          <svg class="slot-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <!-- Nexus -->
+      <div class="nexus-row">
+        <div class="card nexus-card" id="player-nexus">
+          <div class="nexus-glow"></div>
+          <div class="card-image-area nexus-image-area">
+            <!-- Shield/Castle SVG for nexus -->
+            <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 2L4 9v13c0 10 7.2 19.4 16 22 8.8-2.6 16-12 16-22V9L20 2z" fill="url(#nexusGrad)" stroke="rgba(255,215,64,0.5)" stroke-width="1.5"/>
+              <path d="M20 10L11 14v8c0 6 4.2 11.5 9 13.5 4.8-2 9-7.5 9-13.5v-8L20 10z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,215,64,0.4)" stroke-width="1"/>
+              <path d="M16 22l3 3 6-6" stroke="rgba(255,215,64,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="nexusGrad" x1="4" y1="2" x2="36" y2="44" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#7c4dff"/>
+                  <stop offset="1" stop-color="#311b92"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="card-name">NEXUS</div>
+          <div class="card-description">Il tuo cuore pulsante.<br>Proteggilo ad ogni costo!</div>
+          <div class="nexus-hp-bar">
+            <div class="nexus-hp-fill" id="nexus-hp-fill" style="width:100%"></div>
+          </div>
+          <div class="nexus-hp-text">
+            <svg class="stat-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 14.25l-.345.666a.75.75 0 0 0 .69 0L8 14.25zm0 0C2.561 11.08 1 8.5 1 6.5A4.5 4.5 0 0 1 8 2.75 4.5 4.5 0 0 1 15 6.5c0 2-1.56 4.58-7 7.75z"/></svg>
+            <span id="nexus-hp-val">30</span>/30
+          </div>
+        </div>
+      </div>
+
+      <!-- Hand -->
+      <div class="hand-area">
+        <p class="hand-label">La tua mano</p>
+        <div id="player-hand" class="hand-cards"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ TOAST ══════════════════════ -->
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

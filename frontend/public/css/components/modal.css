@@ -1,0 +1,49 @@
+/* ─────────────────────────────────────────────
+   MODAL — overlay + dialog box
+   ───────────────────────────────────────────── */
+.modal {
+  position:        fixed;
+  inset:           0;
+  z-index:         var(--z-modal);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         20px;
+  animation:       fadeIn 0.15s ease;
+}
+
+.modal-overlay {
+  position:   absolute;
+  inset:      0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.modal-box {
+  position:       relative;
+  z-index:        1;
+  border-radius:  var(--radius);
+  padding:        24px;
+  width:          100%;
+  max-width:      360px;
+  background:     var(--c-white);
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+  animation:      slideInUp 0.2s ease;
+}
+
+.modal-box h3 {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  font-size:   15px;
+  font-weight: 600;
+  color:       var(--c-text);
+}
+
+.modal-actions {
+  display: flex;
+  gap:     8px;
+}
+
+.modal-actions .btn { flex: 1; }

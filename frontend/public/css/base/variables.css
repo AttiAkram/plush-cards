@@ -1,0 +1,38 @@
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS — single source of truth
+   ───────────────────────────────────────────── */
+:root {
+  /* Palette */
+  --c-bg:      #F2F2F2;
+  --c-white:   #FFFFFF;
+  --c-border:  #E5E5E5;
+  --c-text:    #0F0F0F;
+  --c-sub:     #606060;
+  --c-red:     #C62828;
+  --c-green:   #2BA640;
+  --c-amber:   #FF8C00;
+
+  /* Rarity border colors (light-theme adapted) */
+  --r-comune:  #90A4AE;
+  --r-raro:    #1565C0;
+  --r-epico:   #6A1B9A;
+  --r-mitico:  #E65100;
+
+  /* Card dimensions */
+  --card-w: 110px;
+  --card-h: 154px;
+
+  /* Radii */
+  --radius:      12px;
+  --radius-sm:    8px;
+  --radius-pill: 18px;
+
+  /* Transitions */
+  --t-fast: 150ms ease;
+  --t-base: 200ms ease;
+
+  /* Z-index scale */
+  --z-nav:   100;
+  --z-modal: 200;
+  --z-toast: 9999;
+}

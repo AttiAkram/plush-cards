@@ -1,0 +1,38 @@
+/* ─────────────────────────────────────────────
+   LAYOUT — screen system, utilities
+   ───────────────────────────────────────────── */
+
+/* ── Utility ───────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Icon sizing helpers ───────────────────── */
+/* Match the class names used in index.html */
+.field-icon      { width: 14px; height: 14px; flex-shrink: 0; color: var(--c-sub); }
+.btn-icon        { width: 15px; height: 15px; flex-shrink: 0; }
+.btn-icon-sm     { width: 14px; height: 14px; flex-shrink: 0; }
+.brand-icon      { width: 17px; height: 17px; flex-shrink: 0; color: var(--c-text); }
+.section-icon    { width: 17px; height: 17px; flex-shrink: 0; color: var(--c-sub); }
+.section-icon-sm { width: 14px; height: 14px; flex-shrink: 0; color: var(--c-sub); }
+.stat-icon       { width: 10px; height: 10px; fill: currentColor; }
+.icon-slot       { width: 16px; height: 16px; opacity: 0.3; color: var(--c-sub); }
+.icon-stat-sm    { width:  8px; height:  8px; flex-shrink: 0; }
+.empty-icon-svg  { width: 32px; height: 32px; color: var(--c-sub); opacity: 0.5; }
+
+/* ── Screen system ─────────────────────────── */
+.screen {
+  position:       fixed;
+  inset:          0;
+  z-index:        1;
+  display:        none;
+  flex-direction: column;
+  overflow-y:     auto;
+  opacity:        0;
+  transform:      translateY(8px);
+  transition:     opacity var(--t-base), transform var(--t-base);
+}
+
+.screen.active {
+  display:   flex;
+  opacity:   1;
+  transform: translateY(0);
+}

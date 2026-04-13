@@ -1,0 +1,32 @@
+/* ═══════════════════════════════════════════════
+   PLUSH CARDS — CSS Entry Point
+   Imports every layer in dependency order:
+   tokens → reset → layout → components → screens
+   ═══════════════════════════════════════════════ */
+
+/* 1. Design tokens */
+@import './base/variables.css';
+
+/* 2. Reset */
+@import './base/reset.css';
+
+/* 3. Layout & utilities */
+@import './base/layout.css';
+
+/* 4. Animazioni condivise */
+@import './animations/keyframes.css';
+
+/* 5. Componenti UI */
+@import './components/button.css';
+@import './components/form.css';
+@import './components/navbar.css';
+@import './components/card.css';
+@import './components/modal.css';
+@import './components/toast.css';
+@import './components/spinner.css';
+
+/* 6. Schermate */
+@import './screens/auth.css';
+@import './screens/lobby.css';
+@import './screens/room.css';
+@import './screens/game.css';

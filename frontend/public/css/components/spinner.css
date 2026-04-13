@@ -1,0 +1,12 @@
+/* ─────────────────────────────────────────────
+   SPINNER — loading indicator
+   ───────────────────────────────────────────── */
+.spinner {
+  width:         24px;
+  height:        24px;
+  border:        2.5px solid var(--c-border);
+  border-top-color: var(--c-text);
+  border-radius: 50%;
+  animation:     spin 0.7s linear infinite;
+  flex-shrink:   0;
+}

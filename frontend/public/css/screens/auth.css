@@ -1,0 +1,81 @@
+/* ─────────────────────────────────────────────
+   SCREEN — Auth (login / register)
+   ───────────────────────────────────────────── */
+#screen-auth {
+  background:      var(--c-bg);
+  align-items:     center;
+  justify-content: center;
+  padding:         20px;
+}
+
+/* Decorative floating cards — hidden on this minimal theme */
+.floating-cards { display: none; }
+
+/* Wrapper */
+.auth-wrapper   { width: 100%; max-width: 400px; }
+.auth-container { position: relative; }
+
+/* Logo */
+.logo-area    { text-align: center; margin-bottom: 24px; }
+
+.logo-icon {
+  width:   44px;
+  height:  44px;
+  margin:  0 auto 10px;
+}
+
+.logo-icon svg { width: 100%; height: 100%; }
+
+.logo-title {
+  font-size:      20px;
+  font-weight:    700;
+  color:          var(--c-text);
+  letter-spacing: -0.5px;
+}
+
+.logo-subtitle, .logo-sub {
+  color:       var(--c-sub);
+  font-size:   13px;
+  font-weight: 400;
+  margin-top:  3px;
+}
+
+/* Auth card */
+.auth-box {
+  background:     var(--c-white);
+  border-radius:  var(--radius);
+  padding:        24px;
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+}
+
+/* Tabs */
+.tab-bar {
+  display:       flex;
+  gap:           3px;
+  background:    var(--c-bg);
+  border-radius: var(--radius-sm);
+  padding:       3px;
+}
+
+.tab-btn {
+  flex:          1;
+  padding:       7px;
+  border-radius: 6px;
+  color:         var(--c-sub);
+  font-weight:   500;
+  font-size:     13px;
+  transition:    all var(--t-fast);
+}
+
+.tab-btn.active {
+  background:  var(--c-white);
+  color:       var(--c-text);
+  font-weight: 600;
+  box-shadow:  0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Tab panes */
+.tab-pane        { display: none; flex-direction: column; gap: 12px; }
+.tab-pane.active { display: flex; }

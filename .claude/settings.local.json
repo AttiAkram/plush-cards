@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:3000/api/register -H 'Content-Type: application/json' -d '{\"username\":\"testuser\",\"password\":\"1234\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(rm -f /home/akram/Documents/plush/server.js /home/akram/Documents/plush/package.json /home/akram/Documents/plush/package-lock.json)",
+      "Bash(rm -rf /home/akram/Documents/plush/node_modules /home/akram/Documents/plush/public)",
+      "Bash(docker compose:*)",
+      "Bash(curl -s http://localhost/api/health)",
+      "Bash(curl -s http://localhost/)"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+/* ─────────────────────────────────────────────
+   RESET
+   ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin:     0;
+  padding:    0;
+}
+
+html {
+  font-size:                16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family:             'Montserrat', sans-serif;
+  background:              var(--c-bg);
+  color:                   var(--c-text);
+  min-height:              100vh;
+  overflow-x:              hidden;
+  line-height:             1.5;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size:   inherit;
+}
+
+button { cursor: pointer; border: none; outline: none; background: none; }
+
+a { color: var(--c-text); text-decoration: none; }
+
+img, svg { display: block; }
+
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: #CCC; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #AAA; }

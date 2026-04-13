@@ -1,0 +1,29 @@
+/* ─────────────────────────────────────────────
+   TOAST — ephemeral notification
+   ───────────────────────────────────────────── */
+.toast {
+  position:       fixed;
+  bottom:         24px;
+  left:           50%;
+  z-index:        var(--z-toast);
+  transform:      translateX(-50%) translateY(16px);
+  background:     var(--c-text);
+  color:          #fff;
+  padding:        10px 20px;
+  border-radius:  var(--radius-sm);
+  font-weight:    500;
+  font-size:      13px;
+  pointer-events: none;
+  opacity:        0;
+  white-space:    nowrap;
+  transition:     transform var(--t-base), opacity var(--t-base);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity:   1;
+}
+
+.toast.toast--error {
+  background: var(--c-red);
+}

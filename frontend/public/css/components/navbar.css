@@ -1,0 +1,38 @@
+/* ─────────────────────────────────────────────
+   NAVBAR — top navigation bar
+   ───────────────────────────────────────────── */
+.navbar {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         0 16px;
+  height:          48px;
+  background:      var(--c-white);
+  border-bottom:   1px solid var(--c-border);
+  position:        sticky;
+  top:             0;
+  z-index:         var(--z-nav);
+  flex-shrink:     0;
+}
+
+.nav-brand {
+  display:        flex;
+  align-items:    center;
+  gap:            7px;
+  font-size:      15px;
+  font-weight:    700;
+  color:          var(--c-text);
+  letter-spacing: -0.3px;
+}
+
+.nav-user {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+}
+
+.nav-username {
+  font-size:   13px;
+  font-weight: 600;
+  color:       var(--c-text);
+}

@@ -1,0 +1,72 @@
+/* ─────────────────────────────────────────────
+   BUTTON — all variants
+   ───────────────────────────────────────────── */
+.btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             6px;
+  padding:         8px 16px;
+  border-radius:   var(--radius-pill);
+  font-weight:     500;
+  font-size:       13px;
+  transition:      background var(--t-fast), box-shadow var(--t-fast),
+                   transform var(--t-fast);
+  white-space:     nowrap;
+  cursor:          pointer;
+}
+
+.btn-full  { width: 100%; }
+.btn-sm    { padding: 6px 12px; font-size: 12px; }
+.btn-large { padding: 10px 24px; font-size: 14px; font-weight: 600; }
+
+/* Primary — black */
+.btn-primary {
+  background: var(--c-text);
+  color:      #fff;
+  border:     none;
+}
+.btn-primary:hover  { background: #272727; }
+.btn-primary:active { background: #404040; }
+
+/* Secondary — white outline */
+.btn-secondary {
+  background: var(--c-white);
+  color:      var(--c-text);
+  border:     1px solid var(--c-border);
+}
+.btn-secondary:hover { background: var(--c-bg); }
+
+/* Accent — same as primary for this stack */
+.btn-accent {
+  background: var(--c-text);
+  color:      #fff;
+  border:     none;
+}
+.btn-accent:hover { background: #272727; }
+
+/* Outline — secondary style alias */
+.btn-outline {
+  background: var(--c-white);
+  color:      var(--c-text);
+  border:     1px solid var(--c-border);
+}
+.btn-outline:hover { background: var(--c-bg); }
+
+/* Danger */
+.btn-danger {
+  background: var(--c-white);
+  color:      var(--c-red);
+  border:     1px solid var(--c-red);
+}
+.btn-danger:hover { background: #FFF5F5; }
+
+/* Click feedback */
+.btn-bounce:active { transform: scale(0.97); }
+
+/* Disabled */
+button:disabled {
+  opacity:   0.4;
+  cursor:    not-allowed;
+  transform: none !important;
+}
