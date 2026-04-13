@@ -11,6 +11,9 @@ RUN npm install --omit=dev
 COPY backend/server.js ./
 COPY backend/src/     ./src/
 
+ENV PORT=3000
+ENV NODE_ENV=production
+
 EXPOSE 3000
 
 CMD ["node", "server.js"]
