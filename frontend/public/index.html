@@ -222,18 +222,22 @@
 <section id="screen-game" class="screen">
   <div class="game-board" id="game-board">
 
+    <!-- Floating action buttons -->
+    <button class="btn btn-outline btn-sm btn-leave-match" id="btn-leave-match">← Esci</button>
+    <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
+
     <!-- Opponents area -->
     <div class="opponents-area" id="opponents-area"></div>
 
     <!-- Center bar -->
     <div class="center-bar">
-      <div class="turn-badge glass">
+      <div class="turn-badge">
         <span id="turn-number">Turno 1</span>
         <span id="turn-player">—</span>
       </div>
       <div class="deck-pile" id="deck-pile" title="Mazzo">
         <div class="deck-card-back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
         </div>
         <span id="deck-count" class="deck-count">—</span>
       </div>
@@ -292,6 +296,19 @@
     </div>
   </div>
 </section>
+
+<!-- ══════════════════════ CARD DETAIL MODAL ══════════════════════ -->
+<div id="card-modal" class="card-modal hidden" role="dialog" aria-modal="true">
+  <div class="card-modal-overlay" id="card-modal-overlay"></div>
+  <div class="card-modal-box">
+    <button class="card-modal-close" id="card-modal-close" aria-label="Chiudi">✕</button>
+    <div class="card-modal-art" id="card-modal-art"></div>
+    <div class="card-modal-name" id="card-modal-name"></div>
+    <div class="card-modal-rarity" id="card-modal-rarity"></div>
+    <div class="card-modal-stats" id="card-modal-stats"></div>
+    <div class="card-modal-desc" id="card-modal-desc"></div>
+  </div>
+</div>
 
 <!-- ══════════════════════ TOAST ══════════════════════ -->
 <div id="toast" class="toast" aria-live="polite"></div>

@@ -5,11 +5,8 @@
  *  1. Connect / authenticate with the backend.
  *  2. Re-emit server events through the event bus so screens stay decoupled.
  *  3. Expose action functions (createRoom, joinRoom …) used by screens.
- *
- * Import the `io` ESM build served by the backend via nginx proxy.
  */
 
-// socket.io 4.x ESM client — loaded from CDN (works on every environment).
 import { io } from 'https://cdn.socket.io/4.7.2/socket.io.esm.min.js';
 
 import { getState, setSocket, getSocket } from '../state/store.js';
@@ -22,7 +19,6 @@ import { BACKEND_URL }                    from '../config.js';
 export function connectSocket() {
   if (getSocket()?.connected) return;
 
-  // BACKEND_URL = '' → same origin (Docker/nginx); non-empty → Railway URL
   const socket = BACKEND_URL
     ? io(BACKEND_URL, { auth: { token: getState().token } })
     : io({ auth: { token: getState().token } });
@@ -41,10 +37,16 @@ export function connectSocket() {
   socket.on('error_msg',    msg   => busEmit('socket:error',       msg));
 
   // ── Game events ──────────────────────────────────────────────────────────────
-  socket.on('game_started', gs   => busEmit('socket:game_started', gs));
+  socket.on('game_started',      gs   => busEmit('socket:game_started',      gs));
+  socket.on('turn_changed',      data => busEmit('socket:turn_changed',      data));
+  socket.on('card_played',       data => busEmit('socket:card_played',       data));
+  socket.on('hand_updated',      data => busEmit('socket:hand_updated',      data));
+  socket.on('valid_slots',       data => busEmit('socket:valid_slots',       data));
+  socket.on('left_match',        ()   => busEmit('socket:left_match'));
+  socket.on('player_left_match', data => busEmit('socket:player_left_match', data));
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+// ── Room actions ──────────────────────────────────────────────────────────────
 
 /** @param {string} roomName */
 export function createRoom(roomName) {
@@ -67,4 +69,27 @@ export function startGame() {
 export function disconnectSocket() {
   getSocket()?.disconnect();
   setSocket(null);
+}
+
+// ── Game actions ──────────────────────────────────────────────────────────────
+
+export function endTurn() {
+  getSocket()?.emit('end_turn');
+}
+
+/**
+ * @param {string} cardUid
+ * @param {number} slotIndex
+ */
+export function playCard(cardUid, slotIndex) {
+  getSocket()?.emit('play_card', { cardUid, slotIndex });
+}
+
+/** @param {string} cardUid */
+export function requestValidSlots(cardUid) {
+  getSocket()?.emit('request_valid_slots', { cardUid });
+}
+
+export function leaveMatch() {
+  getSocket()?.emit('leave_match');
 }
