@@ -19,12 +19,23 @@ import { BACKEND_URL }                    from '../config.js';
 export function connectSocket() {
   if (getSocket()?.connected) return;
 
-  const socket = BACKEND_URL
-    ? io(BACKEND_URL, { auth: { token: getState().token } })
-    : io({ auth: { token: getState().token } });
+  const opts = {
+    auth:       { token: getState().token },
+    // Start with polling so the handshake succeeds before upgrading to WS.
+    // This prevents the browser WebSocket error when the token is stale.
+    transports: ['polling', 'websocket'],
+  };
+  const socket = BACKEND_URL ? io(BACKEND_URL, opts) : io(opts);
   setSocket(socket);
 
   socket.on('connect_error', err => {
+    // Socket.io auth middleware rejects with 'Non autorizzato' when the token
+    // is no longer in the server's in-memory sessions (e.g. after a restart).
+    if (err.message === 'Non autorizzato') {
+      import('../events/emitter.js').then(({ emit }) => emit('auth:unauthorized'));
+      socket.disconnect();
+      return;
+    }
     busEmit('socket:error', `Errore connessione: ${err.message}`);
   });
 
