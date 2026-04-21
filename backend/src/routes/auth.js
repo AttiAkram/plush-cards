@@ -39,7 +39,8 @@ router.post('/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Username o password errati' });
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: 'Username o password errati' });
+  if (!valid)        return res.status(401).json({ error: 'Username o password errati' });
+  if (user.disabled) return res.status(401).json({ error: 'Account disabilitato' });
 
   const token = uuidv4();
   sessions.set(token, user.username);

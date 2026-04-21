@@ -10,6 +10,8 @@ import { initLobbyScreen, enterLobby }                   from './screens/lobby.j
 import { initRoomScreen }                                from './screens/room.js';
 import { initGameScreen }                                from './screens/game.js';
 import { initChangePasswordScreen, enterChangePassword } from './screens/changePassword.js';
+import { initProfileScreen }                             from './screens/profile.js';
+import { initAdminScreen }                               from './screens/adminPanel.js';
 import { setState }                                      from './state/store.js';
 import { on }                                            from './events/emitter.js';
 import { disconnectSocket }                              from './socket/client.js';
@@ -21,6 +23,8 @@ initLobbyScreen();
 initRoomScreen();
 initGameScreen();
 initChangePasswordScreen();
+initProfileScreen();
+initAdminScreen();
 
 // ── Global auth guard ─────────────────────────────────────────────────────────
 // Fired when any HTTP call or socket connection gets a 401 / auth rejection

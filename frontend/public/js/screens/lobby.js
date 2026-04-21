@@ -87,6 +87,33 @@ function initJoinByCode() {
   $('join-code-input').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
 }
 
+// ── Profile dropdown ───────────────────────────────────────────────────────────
+
+function initProfileDropdown() {
+  const btn  = $('profile-btn');
+  const menu = $('profile-menu');
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    menu.classList.toggle('hidden');
+  });
+
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (!$('profile-dropdown').contains(e.target)) menu.classList.add('hidden');
+  });
+
+  $('pm-item-profile').addEventListener('click', () => {
+    menu.classList.add('hidden');
+    import('./profile.js').then(({ enterProfile }) => enterProfile());
+  });
+
+  $('pm-item-admin').addEventListener('click', () => {
+    menu.classList.add('hidden');
+    import('./adminPanel.js').then(({ enterAdmin }) => enterAdmin());
+  });
+}
+
 // ── Logout ─────────────────────────────────────────────────────────────────────
 
 function initLogout() {
@@ -113,14 +140,30 @@ export function initLobbyScreen() {
   $('btn-refresh-rooms').addEventListener('click', loadRooms);
   initCreateModal();
   initJoinByCode();
+  initProfileDropdown();
   initLogout();
   initSocketListeners();
 }
 
 /** Navigate to the lobby, connect socket, start room polling. */
 export function enterLobby() {
+  const { username, role } = getState();
+
   connectSocket();
-  $('nav-username').textContent = getState().username;
+  $('nav-username').textContent = username ?? '';
+
+  // Profile avatar initial
+  $('profile-avatar-nav').textContent = (username?.[0] ?? '?').toUpperCase();
+
+  // Role badge in dropdown
+  const ROLE_LABELS = { root: 'AdminRoot', admin: 'Admin', player: 'Player' };
+  $('nav-role-badge').textContent = ROLE_LABELS[role] ?? role ?? 'Player';
+  $('nav-role-badge').className   = `pm-role-badge role-${role ?? 'player'}`;
+
+  // Show admin menu item only for admin/root
+  const isAdmin = role === 'root' || role === 'admin';
+  $('pm-item-admin').classList.toggle('hidden', !isAdmin);
+
   showScreen('lobby');
   loadRooms();
 
