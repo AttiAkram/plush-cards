@@ -3,7 +3,7 @@
 const router             = require('express').Router();
 const bcrypt             = require('bcryptjs');
 const { v4: uuidv4 }    = require('uuid');
-const { users }          = require('../store');
+const { users, cards }   = require('../store');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { BCRYPT_ROUNDS }  = require('../config');
 
@@ -82,6 +82,69 @@ router.patch('/users/:username/disable', authenticate, requireRole('root', 'admi
 
   user.disabled = !(user.disabled ?? false);
   res.json({ ok: true, username: user.username, disabled: user.disabled });
+});
+
+// ── GET /api/admin/cards — list all cards ─────────────────────────────────────
+router.get('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
+  res.json(Array.from(cards.values()));
+});
+
+// ── POST /api/admin/cards — create a new card ─────────────────────────────────
+router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
+  const { id, name, damage, hp, rarity, type = 'personaggio', description = '', effects = [] } = req.body;
+
+  if (!id || !name)
+    return res.status(400).json({ error: 'id e name sono obbligatori' });
+  if (!/^[a-z0-9_-]+$/.test(id))
+    return res.status(400).json({ error: 'id: solo lettere minuscole, numeri, _ e -' });
+  if (cards.has(id))
+    return res.status(400).json({ error: `id "${id}" già in uso` });
+  if (!['personaggio', 'artefatto'].includes(type))
+    return res.status(400).json({ error: 'type non valido' });
+  if (!['comune', 'raro', 'epico', 'mitico', 'leggendario'].includes(rarity))
+    return res.status(400).json({ error: 'rarity non valida' });
+
+  const card = {
+    id,
+    name,
+    damage: Number(damage) || 0,
+    hp:     Number(hp) || 1,
+    rarity,
+    type,
+    active: false,   // new cards start as drafts
+    description,
+    effects: Array.isArray(effects) ? effects : [],
+  };
+
+  cards.set(id, card);
+  res.status(201).json(card);
+});
+
+// ── PUT /api/admin/cards/:id — replace a card ─────────────────────────────────
+router.put('/cards/:id', authenticate, requireRole('root', 'admin'), (req, res) => {
+  const card = cards.get(req.params.id);
+  if (!card) return res.status(404).json({ error: 'Carta non trovata' });
+
+  const { name, damage, hp, rarity, type, description, effects, active } = req.body;
+
+  if (name        !== undefined) card.name        = name;
+  if (damage      !== undefined) card.damage      = Number(damage) || 0;
+  if (hp          !== undefined) card.hp          = Number(hp) || 1;
+  if (rarity      !== undefined) card.rarity      = rarity;
+  if (type        !== undefined) card.type        = type;
+  if (description !== undefined) card.description = description;
+  if (effects     !== undefined) card.effects     = Array.isArray(effects) ? effects : [];
+  if (active      !== undefined) card.active      = Boolean(active);
+
+  res.json(card);
+});
+
+// ── PATCH /api/admin/cards/:id/toggle — flip active flag ─────────────────────
+router.patch('/cards/:id/toggle', authenticate, requireRole('root', 'admin'), (req, res) => {
+  const card = cards.get(req.params.id);
+  if (!card) return res.status(404).json({ error: 'Carta non trovata' });
+  card.active = !card.active;
+  res.json({ ok: true, id: card.id, active: card.active });
 });
 
 module.exports = router;

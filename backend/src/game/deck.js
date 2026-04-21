@@ -1,7 +1,7 @@
 'use strict';
 
-const { v4: uuidv4 }       = require('uuid');
-const { CARD_DEFINITIONS } = require('./cards');
+const { v4: uuidv4 } = require('uuid');
+const store          = require('../store');
 
 /** How many copies of each rarity go into one deck. */
 const RARITY_COPIES = {
@@ -27,14 +27,15 @@ function shuffle(arr) {
 }
 
 /**
- * Build a full shuffled deck.
- * Each card gets a unique `uid` so duplicate cards can be told apart.
+ * Build a full shuffled deck from the live card store (active cards only).
+ * Each card gets a unique `uid` so duplicate copies can be told apart.
  * @returns {import('./cards').CardDef[]}
  */
 function createDeck() {
   const deck = [];
 
-  for (const def of CARD_DEFINITIONS) {
+  for (const def of store.cards.values()) {
+    if (!def.active) continue;
     const copies = RARITY_COPIES[def.rarity] ?? 1;
     for (let i = 0; i < copies; i++) {
       deck.push({ ...def, uid: uuidv4() });

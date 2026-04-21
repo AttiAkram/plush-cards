@@ -2,26 +2,14 @@
  * Admin panel screen — user management, card catalog (placeholder).
  */
 
-import { $, el, escHtml }   from '../utils/dom.js';
-import * as api              from '../api/client.js';
-import { getState }          from '../state/store.js';
-import { showScreen }        from '../router/index.js';
-import { showToast }         from '../components/toast.js';
+import { $, el, escHtml }              from '../utils/dom.js';
+import * as api                        from '../api/client.js';
+import { getState }                    from '../state/store.js';
+import { showScreen }                  from '../router/index.js';
+import { showToast }                   from '../components/toast.js';
+import { openCardEditor, initCardEditor } from './cardEditor.js';
 
 const ROLE_LABELS = { root: 'AdminRoot', admin: 'Admin', player: 'Player' };
-
-// ── Tab switching ─────────────────────────────────────────────────────────────
-
-function initTabs() {
-  document.querySelectorAll('.admin-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.admin-pane').forEach(p => p.classList.add('hidden'));
-      btn.classList.add('active');
-      $('admin-tab-' + btn.dataset.tab).classList.remove('hidden');
-    });
-  });
-}
 
 // ── User list ─────────────────────────────────────────────────────────────────
 
@@ -157,6 +145,82 @@ function initNewUserModal() {
   });
 }
 
+// ── Card list ─────────────────────────────────────────────────────────────────
+
+const RARITY_LABELS_CARD = {
+  comune: 'C', raro: 'R', epico: 'E', mitico: 'M', leggendario: 'L',
+};
+
+async function loadCards() {
+  const list = $('admin-card-list');
+  list.innerHTML = '<div class="admin-loading">Caricamento…</div>';
+  const cards = await api.get('/api/admin/cards');
+  if (cards.error) { list.innerHTML = `<div class="admin-loading">${escHtml(cards.error)}</div>`; return; }
+  renderCardList(cards);
+}
+
+function renderCardList(cards) {
+  const list = $('admin-card-list');
+  list.innerHTML = '';
+
+  if (!cards.length) {
+    list.innerHTML = '<div class="admin-loading">Nessuna carta trovata.</div>';
+    return;
+  }
+
+  for (const card of cards) {
+    const row = el('div', 'admin-card-row');
+    row.innerHTML = `
+      <div class="admin-card-rarity-badge rarity-${card.rarity}">${RARITY_LABELS_CARD[card.rarity] ?? '?'}</div>
+      <div class="admin-card-info">
+        <span class="admin-card-name">${escHtml(card.name)}</span>
+        <span class="admin-card-meta">${escHtml(card.type)} · ATK ${card.damage} · HP ${card.hp} · ${card.effects?.length ?? 0} effett${card.effects?.length === 1 ? 'o' : 'i'}</span>
+      </div>
+      <div class="admin-card-status ${card.active ? 'status-active' : 'status-disabled'}">${card.active ? 'Attiva' : 'Bozza'}</div>
+      <div class="admin-card-actions"></div>`;
+
+    const actions = row.querySelector('.admin-card-actions');
+
+    // Toggle active
+    const toggleBtn = el('button', `btn btn-sm ${card.active ? 'btn-outline' : 'btn-primary'}`);
+    toggleBtn.textContent = card.active ? 'Disattiva' : 'Attiva';
+    toggleBtn.addEventListener('click', async () => {
+      const res = await api.patch(`/api/admin/cards/${card.id}/toggle`, {});
+      if (res.error) { showToast(res.error, true); return; }
+      card.active = res.active;
+      row.querySelector('.admin-card-status').textContent = card.active ? 'Attiva' : 'Bozza';
+      row.querySelector('.admin-card-status').className   = `admin-card-status ${card.active ? 'status-active' : 'status-disabled'}`;
+      toggleBtn.textContent = card.active ? 'Disattiva' : 'Attiva';
+      toggleBtn.className   = `btn btn-sm ${card.active ? 'btn-outline' : 'btn-primary'}`;
+      showToast(card.active ? 'Carta attivata' : 'Carta disattivata');
+    });
+
+    // Edit button
+    const editBtn = el('button', 'btn btn-sm btn-outline');
+    editBtn.textContent = 'Modifica';
+    editBtn.addEventListener('click', () => openCardEditor(card, loadCards));
+
+    actions.appendChild(toggleBtn);
+    actions.appendChild(editBtn);
+    list.appendChild(row);
+  }
+}
+
+// ── Tab switching (extended to load data) ─────────────────────────────────────
+
+function initTabs() {
+  document.querySelectorAll('.admin-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.admin-pane').forEach(p => p.classList.add('hidden'));
+      btn.classList.add('active');
+      const pane = $('admin-tab-' + btn.dataset.tab);
+      pane.classList.remove('hidden');
+      if (btn.dataset.tab === 'cards') loadCards();
+    });
+  });
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function enterAdmin() {
@@ -173,6 +237,9 @@ export function enterAdmin() {
 export function initAdminScreen() {
   initTabs();
   initNewUserModal();
+  initCardEditor();
+
+  $('btn-new-card').addEventListener('click', () => openCardEditor(null, loadCards));
 
   $('btn-back-admin').addEventListener('click', () => {
     import('./lobby.js').then(({ enterLobby }) => enterLobby());

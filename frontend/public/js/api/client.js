@@ -73,6 +73,29 @@ export async function patch(path, body = {}) {
 }
 
 /**
+ * PUT a JSON API endpoint.
+ * @template T
+ * @param {string} path
+ * @param {object} body
+ * @returns {Promise<T>}
+ */
+export async function put(path, body = {}) {
+  try {
+    const res  = await fetch(BACKEND_URL + path, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (res.status === 401) { handleUnauthorized(); return data; }
+    if (!res.ok && !data.error) data.error = `Errore ${res.status}`;
+    return data;
+  } catch {
+    return { error: 'Impossibile raggiungere il server. Riprova.' };
+  }
+}
+
+/**
  * GET a JSON API endpoint.
  * @template T
  * @param {string} path

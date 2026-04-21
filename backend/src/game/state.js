@@ -10,10 +10,19 @@ const { HAND_SIZE, NEXUS_HP, FIELD_SIZE }  = require('../config');
  * @returns {object} Serialisable game state sent to all clients.
  */
 function initGameState(room) {
-  const deck         = createDeck();
+  const sharedDeck   = createDeck();
   const playerStates = {};
 
-  for (const player of room.players) {
+  // Split the shared deck into per-player decks (roughly equal)
+  const perPlayer = Math.floor(sharedDeck.length / room.players.length);
+
+  for (let pi = 0; pi < room.players.length; pi++) {
+    const player = room.players[pi];
+    const start  = pi * perPlayer;
+    // Last player gets any remainder cards
+    const end    = pi === room.players.length - 1 ? sharedDeck.length : start + perPlayer;
+    const deck   = sharedDeck.slice(start, end);
+
     // Deal opening hand
     const hand = [];
     for (let i = 0; i < HAND_SIZE; i++) {
@@ -23,11 +32,12 @@ function initGameState(room) {
 
     playerStates[player.username] = {
       username:  player.username,
-      status:    'active',                                    // 'active' | 'disconnected' | 'left'
+      status:    'active',
       nexus:     { hp: NEXUS_HP, maxHp: NEXUS_HP },
       hand,
       field:     Array.from({ length: FIELD_SIZE }, () => null),
-      deckCount: Math.floor(deck.length / room.players.length),
+      deck,                           // kept server-side for draw effects
+      deckCount: deck.length,
       discard:   [],
     };
   }

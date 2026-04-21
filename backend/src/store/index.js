@@ -10,6 +10,7 @@
 const bcrypt     = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { BCRYPT_ROUNDS } = require('../config');
+const { CARD_DEFINITIONS } = require('../game/cards');
 
 /**
  * @type {Map<string, {
@@ -31,6 +32,17 @@ const rooms = new Map();            // key: roomCode
 /** @type {Map<string, { username: string, roomCode: string|null }>} */
 const sockets = new Map();          // key: socket.id
 
+/**
+ * @type {Map<string, import('../game/cards').CardDef>}
+ * key: card id. Seeded from CARD_DEFINITIONS; editable at runtime via admin API.
+ */
+const cards = new Map();
+
+// ── Seed cards ────────────────────────────────────────────────────────────────
+for (const def of CARD_DEFINITIONS) {
+  cards.set(def.id, { ...def });
+}
+
 // ── Seed AdminRoot ─────────────────────────────────────────────────────────────
 // Created once on startup. Default credentials: admin / admin.
 // The first login forces a mandatory password change before accessing the app.
@@ -42,4 +54,4 @@ users.set('admin', {
   mustChangePassword: true,
 });
 
-module.exports = { users, sessions, rooms, sockets };
+module.exports = { users, sessions, rooms, sockets, cards };

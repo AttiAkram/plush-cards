@@ -53,6 +53,7 @@ export function connectSocket() {
   socket.on('card_played',       data => busEmit('socket:card_played',       data));
   socket.on('hand_updated',      data => busEmit('socket:hand_updated',      data));
   socket.on('valid_slots',       data => busEmit('socket:valid_slots',       data));
+  socket.on('effects_applied',       data => busEmit('socket:effects_applied',    data));
   socket.on('left_match',            ()   => busEmit('socket:left_match'));
   socket.on('player_left_match',     data => busEmit('socket:player_left_match',     data));
   socket.on('player_status_changed', data => busEmit('socket:player_status_changed', data));

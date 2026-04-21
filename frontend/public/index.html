@@ -302,12 +302,17 @@
         <div class="admin-loading">Caricamento…</div>
       </div>
     </div>
-    <!-- Cards tab placeholder -->
+    <!-- Cards tab -->
     <div class="admin-pane hidden" id="admin-tab-cards">
-      <div class="admin-coming-soon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="3"/><path d="M8 21h8M12 17v4"/></svg>
-        <p>Catalogo Carte</p>
-        <span>Prossimamente</span>
+      <div class="admin-pane-header">
+        <h3>Catalogo Carte</h3>
+        <button class="btn btn-sm btn-primary" id="btn-new-card">
+          <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuova carta
+        </button>
+      </div>
+      <div id="admin-card-list" class="admin-card-list">
+        <div class="admin-loading">Caricamento…</div>
       </div>
     </div>
   </div>
@@ -588,6 +593,86 @@
     <div class="card-modal-stats" id="card-modal-stats"></div>
     <div class="card-modal-desc" id="card-modal-desc"></div>
     <button class="btn btn-primary card-modal-play hidden" id="card-modal-play">Gioca</button>
+  </div>
+</div>
+
+<!-- ══════════════════ CARD EDITOR PANEL ══════════════ -->
+<div id="card-editor-panel" class="card-editor-panel hidden" role="dialog" aria-modal="true">
+  <div class="card-editor-overlay" id="card-editor-overlay"></div>
+  <div class="card-editor-box">
+    <div class="card-editor-header">
+      <span id="card-editor-title">Nuova Carta</span>
+      <button class="card-editor-close" id="card-editor-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="card-editor-body">
+
+      <!-- Base fields -->
+      <div class="ce-section-label">Informazioni base</div>
+      <div class="ce-row">
+        <div class="field-group ce-field-half">
+          <label for="ce-id">ID univoco</label>
+          <input id="ce-id" type="text" placeholder="es. drago_fuoco" maxlength="32">
+        </div>
+        <div class="field-group ce-field-half">
+          <label for="ce-name">Nome</label>
+          <input id="ce-name" type="text" placeholder="Nome carta" maxlength="40">
+        </div>
+      </div>
+      <div class="ce-row">
+        <div class="field-group ce-field-third">
+          <label for="ce-type">Tipo</label>
+          <select id="ce-type" class="select-input">
+            <option value="personaggio">Personaggio</option>
+            <option value="artefatto">Artefatto</option>
+          </select>
+        </div>
+        <div class="field-group ce-field-third">
+          <label for="ce-rarity">Rarità</label>
+          <select id="ce-rarity" class="select-input">
+            <option value="comune">Comune</option>
+            <option value="raro">Raro</option>
+            <option value="epico">Epico</option>
+            <option value="mitico">Mitico</option>
+            <option value="leggendario">Leggendario</option>
+          </select>
+        </div>
+        <div class="field-group ce-field-third">
+          <label>&nbsp;</label>
+          <label class="ce-toggle-row">
+            <input type="checkbox" id="ce-active">
+            <span class="ce-toggle-label">Attiva (in gioco)</span>
+          </label>
+        </div>
+      </div>
+      <div class="ce-row">
+        <div class="field-group ce-field-half">
+          <label for="ce-damage">Attacco</label>
+          <input id="ce-damage" type="number" min="0" max="99" value="1">
+        </div>
+        <div class="field-group ce-field-half">
+          <label for="ce-hp">Vita</label>
+          <input id="ce-hp" type="number" min="1" max="999" value="1">
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="ce-description">Descrizione</label>
+        <textarea id="ce-description" rows="2" placeholder="Testo descrittivo della carta…" maxlength="280"></textarea>
+      </div>
+
+      <!-- Effects -->
+      <div class="ce-section-label ce-effects-label">
+        Effetti
+        <button class="btn btn-sm btn-outline" id="btn-add-effect" type="button">+ Aggiungi</button>
+      </div>
+      <div id="ce-effects-list" class="ce-effects-list"></div>
+
+      <!-- Error -->
+      <div id="ce-error" class="error-msg"></div>
+    </div>
+    <div class="card-editor-footer">
+      <button class="btn btn-outline" id="btn-ce-cancel">Annulla</button>
+      <button class="btn btn-primary btn-bounce" id="btn-ce-save">Salva</button>
+    </div>
   </div>
 </div>
 

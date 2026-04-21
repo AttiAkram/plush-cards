@@ -16,6 +16,7 @@ import { on }                                     from '../events/emitter.js';
 import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
          leaveMatch }                             from '../socket/client.js';
+import { showToast }                              from '../components/toast.js';
 
 // ── Drag state ────────────────────────────────────────────────────────────────
 
@@ -838,6 +839,23 @@ function initSocketListeners() {
     setState({ gameState: gs });
     renderHand(hand);
     refreshPanelIfOpen(getState().username, gs);
+  });
+
+  on('socket:effects_applied', ({ results, gameState: newGs }) => {
+    if (!newGs) return;
+    const me = getState().username;
+    setState({ gameState: newGs });
+    renderPlayersBar(newGs);
+    renderOpponentsArea(newGs);
+    renderField(newGs.players[me]?.field ?? [], 'player-field');
+    updateEndTurnBtn(newGs);
+    // Refresh open player panel for any player
+    for (const uname of Object.keys(newGs.players)) {
+      refreshPanelIfOpen(uname, newGs);
+    }
+    for (const msg of results) {
+      showToast(msg);
+    }
   });
 
   on('socket:valid_slots', ({ cardUid, validSlots }) => {
