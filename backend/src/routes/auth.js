@@ -1,11 +1,11 @@
 'use strict';
 
-const router                  = require('express').Router();
-const bcrypt                  = require('bcryptjs');
-const { v4: uuidv4 }          = require('uuid');
-const { users, sessions }     = require('../store');
-const { authenticate }        = require('../middleware/auth');
-const { BCRYPT_ROUNDS }       = require('../config');
+const router              = require('express').Router();
+const bcrypt              = require('bcryptjs');
+const { v4: uuidv4 }     = require('uuid');
+const { users, sessions } = require('../store');
+const { authenticate }    = require('../middleware/auth');
+const { BCRYPT_ROUNDS }   = require('../config');
 
 // ── POST /api/register ────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
@@ -21,11 +21,14 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Username già in uso' });
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  users.set(username.toLowerCase(), { username, passwordHash, id: uuidv4() });
+  users.set(username.toLowerCase(), {
+    username, passwordHash, id: uuidv4(),
+    role: 'player', mustChangePassword: false,
+  });
 
   const token = uuidv4();
   sessions.set(token, username);
-  res.status(201).json({ token, username });
+  res.status(201).json({ token, username, role: 'player', mustChangePassword: false });
 });
 
 // ── POST /api/login ───────────────────────────────────────────────────────────
@@ -40,7 +43,27 @@ router.post('/login', async (req, res) => {
 
   const token = uuidv4();
   sessions.set(token, user.username);
-  res.json({ token, username: user.username });
+  res.json({
+    token,
+    username:           user.username,
+    role:               user.role               ?? 'player',
+    mustChangePassword: user.mustChangePassword ?? false,
+  });
+});
+
+// ── POST /api/change-password ─────────────────────────────────────────────────
+router.post('/change-password', authenticate, async (req, res) => {
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 4)
+    return res.status(400).json({ error: 'Password troppo corta (min 4)' });
+
+  const user = users.get(req.username.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'Utente non trovato' });
+
+  user.passwordHash       = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  user.mustChangePassword = false;
+  res.json({ ok: true });
 });
 
 // ── POST /api/logout ──────────────────────────────────────────────────────────

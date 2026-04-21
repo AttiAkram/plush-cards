@@ -8,13 +8,17 @@
 
 const _state = {
   /** @type {string|null} */
-  token:     null,
+  token:              null,
   /** @type {string|null} */
-  username:  null,
+  username:           null,
+  /** @type {'root'|'admin'|'player'|null} */
+  role:               null,
+  /** @type {boolean} */
+  mustChangePassword: false,
   /** @type {object|null} */
-  room:      null,
+  room:               null,
   /** @type {object|null} */
-  gameState: null,
+  gameState:          null,
 };
 
 // The socket instance is kept separately (not serialisable / not reactive)

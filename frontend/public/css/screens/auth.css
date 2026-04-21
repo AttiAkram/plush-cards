@@ -1,12 +1,31 @@
 /* ─────────────────────────────────────────────
-   SCREEN — Auth
+   SCREEN — Auth + Change Password
+   (shared layout via .auth-wrapper / .auth-box)
    ───────────────────────────────────────────── */
-#screen-auth {
+#screen-auth,
+#screen-changepass {
   background:      var(--c-bg);
   align-items:     center;
   justify-content: center;
   padding:         24px 16px;
   min-height:      100vh;
+}
+
+/* Change-password intro text */
+.changepass-header {
+  margin-bottom: 20px;
+}
+.changepass-title {
+  font-size:   16px;
+  font-weight: 700;
+  color:       var(--c-text);
+  margin:      0 0 6px;
+}
+.changepass-sub {
+  font-size:   12px;
+  color:       var(--c-sub);
+  line-height: 1.5;
+  margin:      0;
 }
 
 /* Wrapper — max width centrato */

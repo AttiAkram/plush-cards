@@ -7,19 +7,24 @@ import * as api         from '../api/client.js';
 import { setState }     from '../state/store.js';
 import { showScreen }   from '../router/index.js';
 import { enterLobby }   from './lobby.js';
+import { enterChangePassword } from './changePassword.js';
 
 // ── Session helpers ────────────────────────────────────────────────────────────
 
-export function saveSession(token, username) {
-  setState({ token, username });
-  localStorage.setItem('plush_token',    token);
-  localStorage.setItem('plush_username', username);
+export function saveSession(token, username, role = 'player', mustChangePassword = false) {
+  setState({ token, username, role, mustChangePassword });
+  localStorage.setItem('plush_token',              token);
+  localStorage.setItem('plush_username',           username);
+  localStorage.setItem('plush_role',               role);
+  localStorage.setItem('plush_mustchangepassword', String(mustChangePassword));
 }
 
 export function clearSession() {
-  setState({ token: null, username: null, room: null, gameState: null });
+  setState({ token: null, username: null, role: null, mustChangePassword: false, room: null, gameState: null });
   localStorage.removeItem('plush_token');
   localStorage.removeItem('plush_username');
+  localStorage.removeItem('plush_role');
+  localStorage.removeItem('plush_mustchangepassword');
 }
 
 // ── Error display ──────────────────────────────────────────────────────────────
@@ -72,8 +77,8 @@ function initLoginForm() {
     try {
       const res = await api.post('/api/login', { username, password });
       if (res.error) return showError(res.error, 'auth-error');
-      saveSession(res.token, res.username);
-      enterLobby();
+      saveSession(res.token, res.username, res.role, res.mustChangePassword);
+      res.mustChangePassword ? enterChangePassword() : enterLobby();
     } finally {
       btn.disabled = false;
       btn.textContent = 'Accedi';
@@ -100,7 +105,7 @@ function initRegisterForm() {
     try {
       const res = await api.post('/api/register', { username, password });
       if (res.error) return showError(res.error, 'auth-error-reg');
-      saveSession(res.token, res.username);
+      saveSession(res.token, res.username, res.role, res.mustChangePassword);
       enterLobby();
     } finally {
       btn.disabled = false;
