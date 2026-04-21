@@ -7,7 +7,7 @@ import { getState, setState } from '../state/store.js';
 import { showScreen }         from '../router/index.js';
 import { showToast }          from '../components/toast.js';
 import { on }                 from '../events/emitter.js';
-import { leaveRoom, startGame } from '../socket/client.js';
+import { leaveRoom, startGame, startDebugGame } from '../socket/client.js';
 import { enterLobby }         from './lobby.js';
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -43,17 +43,22 @@ function renderPlayerList(room) {
 }
 
 function updateControls(room) {
-  const isHost = room.host === getState().username;
+  const { username, role } = getState();
+  const isHost  = room.host === username;
+  const isAdmin = role === 'root' || role === 'admin';
 
   $('host-controls').classList.toggle('hidden', !isHost);
   $('waiting-msg').classList.toggle('hidden',    isHost);
 
   if (isHost) {
     const canStart = room.players.length >= 2;
-    $('btn-start-game').disabled  = !canStart;
-    $('start-hint').textContent   = canStart
+    $('btn-start-game').disabled = !canStart;
+    $('start-hint').textContent  = canStart
       ? 'Pronti! Dai il via alla battaglia.'
       : `Servono almeno 2 giocatori (${room.players.length}/2)`;
+
+    // Debug button: only for admin/root when there aren't enough players yet
+    $('btn-debug-game').classList.toggle('hidden', !(isAdmin && !canStart));
   }
 }
 
@@ -73,6 +78,7 @@ function initCopyCode() {
 
 function initStartButton() {
   $('btn-start-game').addEventListener('click', startGame);
+  $('btn-debug-game').addEventListener('click', startDebugGame);
 }
 
 // ── Socket events ──────────────────────────────────────────────────────────────

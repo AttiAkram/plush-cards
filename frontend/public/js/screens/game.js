@@ -734,6 +734,9 @@ export function renderGameBoard(gameState) {
   updateNexus(myState.nexus);
   renderHand(myState.hand);
   renderField(myState.field, 'player-field');
+
+  // Debug badge — visible only in single-player test games
+  $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

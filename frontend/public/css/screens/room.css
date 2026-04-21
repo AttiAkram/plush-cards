@@ -122,6 +122,14 @@
 
 .start-hint { color: var(--c-sub); font-size: 13px; font-weight: 400; text-align: center; }
 
+.btn-debug {
+  font-size:  12px;
+  padding:    8px 18px;
+  opacity:    0.8;
+  border-style: dashed;
+}
+.btn-debug:hover { opacity: 1; }
+
 /* Waiting message */
 .waiting-msg {
   display:        flex;

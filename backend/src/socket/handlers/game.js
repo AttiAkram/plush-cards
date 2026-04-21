@@ -3,6 +3,12 @@
 const store              = require('../../store');
 const { initGameState }  = require('../../game/state');
 
+/** Returns true if `username` has admin or root role. */
+function isAdminUser(username) {
+  const user = store.users.get(username?.toLowerCase());
+  return user?.role === 'root' || user?.role === 'admin';
+}
+
 /**
  * Register game-related socket event handlers for one connection.
  *
@@ -22,18 +28,23 @@ function registerGameHandlers(io, socket) {
   }
 
   // ── start_game ───────────────────────────────────────────────────────────────
+  // Accepts optional { debug: true } to allow single-player debug mode (admin/root only).
 
-  socket.on('start_game', () => {
+  socket.on('start_game', ({ debug = false } = {}) => {
     const { room, roomCode } = getRoomAndState();
     if (!room) return;
 
     if (room.host !== username)
       return socket.emit('error_msg', 'Solo il host può iniziare la partita');
-    if (room.players.length < 2)
+
+    const debugAllowed = debug && isAdminUser(username);
+
+    if (room.players.length < 2 && !debugAllowed)
       return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
 
     room.status    = 'playing';
     room.gameState = initGameState(room);
+    if (debugAllowed) room.gameState.debugMode = true;
 
     io.to(roomCode).emit('game_started', room.gameState);
   });

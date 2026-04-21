@@ -78,6 +78,10 @@ export function startGame() {
   getSocket()?.emit('start_game');
 }
 
+export function startDebugGame() {
+  getSocket()?.emit('start_game', { debug: true });
+}
+
 export function disconnectSocket() {
   getSocket()?.disconnect();
   setSocket(null);

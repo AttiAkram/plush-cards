@@ -229,6 +229,10 @@
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Inizia la Partita
       </button>
+      <button class="btn btn-outline btn-debug hidden" id="btn-debug-game">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a4 4 0 0 1-8 0v-1H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1V6a4 4 0 0 1 4-4z"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Avvia partita di test (solo)
+      </button>
     </div>
 
     <div id="waiting-msg" class="waiting-msg hidden">
@@ -373,6 +377,12 @@
 <!-- ══════════════════════ SCREEN: GAME ══════════════════════ -->
 <section id="screen-game" class="screen">
   <div class="game-board" id="game-board">
+
+    <!-- Debug mode badge (top-left, only in debug games) -->
+    <div class="debug-badge hidden" id="debug-badge">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 1 4 4v.5h.5A1.5 1.5 0 0 1 14 7v1a1.5 1.5 0 0 1-1.5 1.5H12v.5a4 4 0 0 1-8 0V10h-.5A1.5 1.5 0 0 1 2 8.5V7a1.5 1.5 0 0 1 1.5-1.5H4V5a4 4 0 0 1 4-4zm0 1a3 3 0 0 0-3 3v1h6V5a3 3 0 0 0-3-3zm0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+      DEBUG
+    </div>
 
     <!-- End Turn (floating, bottom-right) -->
     <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
