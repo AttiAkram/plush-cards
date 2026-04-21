@@ -10,8 +10,8 @@ import { showToast }        from '../components/toast.js';
 
 const TRIGGERS = [
   { value: 'QUANDO_GIOCATA',      label: 'Quando giocata' },
-  { value: 'ALL_INIZIO_TURNO',    label: 'Inizio turno (tutti)' },
-  { value: 'ALL_FINE_TURNO',      label: 'Fine turno (tutti)' },
+  { value: 'ALL_INIZIO_TURNO',    label: 'Inizio del tuo turno' },
+  { value: 'ALL_FINE_TURNO',      label: 'Fine del tuo turno' },
   { value: 'QUANDO_DICHIARA',     label: 'Quando dichiara attacco' },
   { value: 'PASSIVO_SE_IN_CAMPO', label: 'Passivo (se in campo)' },
   { value: 'ON_MORTE',            label: 'Alla morte' },
@@ -21,11 +21,18 @@ const ACTIONS = [
   { value: 'PESCA_CARTE',             label: 'Pesca carte',              params: ['amount'] },
   { value: 'DANNO_A_CARTA',           label: 'Infliggi danno a carta',   params: ['amount'] },
   { value: 'DANNO_A_ARTEFATTO',       label: 'Infliggi danno artefatto', params: ['amount'] },
-  { value: 'MODIFICA_ATTACCO',        label: 'Modifica attacco',         params: ['amount'] },
-  { value: 'MODIFICA_VITA',           label: 'Modifica vita',            params: ['amount'] },
-  { value: 'SPOSTA_CARTA_DI_ZONA',    label: 'Sposta carta di zona',     params: [] },
+  { value: 'MODIFICA_ATTACCO',        label: 'Modifica attacco (±)',      params: ['amount'] },
+  { value: 'MODIFICA_VITA',           label: 'Modifica vita (±)',         params: ['amount'] },
+  { value: 'SPOSTA_CARTA_DI_ZONA',    label: 'Sposta carta di zona',     params: ['destinazione'] },
   { value: 'SCAMBIA_POSIZIONI_CAMPO', label: 'Scambia posizioni campo',  params: [] },
   { value: 'ABILITA_TRIGGER_GLOBALI', label: 'Abilita trigger globali',  params: [] },
+];
+
+const ZONE_DESTINATIONS = [
+  { value: 'mano',     label: 'Mano' },
+  { value: 'scarti',   label: 'Scarti' },
+  { value: 'vuoto',    label: 'Vuoto' },
+  { value: 'assoluto', label: 'Assoluto' },
 ];
 
 const TARGETS = [
@@ -66,6 +73,7 @@ function buildEffectRow(effect = {}) {
   const actionSel  = makeSelect(ACTIONS,  effect.action  || 'PESCA_CARTE',    'select-input ce-sel-action');
   const targetSel  = makeSelect(TARGETS,  effect.target  || 'SE_STESSO',      'select-input ce-sel-target');
 
+  // Amount param
   const amountWrap  = el('div', 'ce-amount-wrap');
   const amountLabel = el('label', 'ce-amount-label');
   amountLabel.textContent = 'Quantità';
@@ -77,24 +85,35 @@ function buildEffectRow(effect = {}) {
   amountWrap.appendChild(amountLabel);
   amountWrap.appendChild(amountInput);
 
+  // Destinazione param (for SPOSTA_CARTA_DI_ZONA)
+  const destWrap  = el('div', 'ce-amount-wrap');
+  const destLabel = el('label', 'ce-amount-label');
+  destLabel.textContent = 'Destinazione';
+  const destSel = makeSelect(ZONE_DESTINATIONS, effect.params?.destinazione ?? 'mano', 'select-input ce-sel-dest');
+  destWrap.appendChild(destLabel);
+  destWrap.appendChild(destSel);
+
   const removeBtn = el('button', 'ce-effect-remove');
   removeBtn.type        = 'button';
   removeBtn.textContent = '✕';
   removeBtn.title       = 'Rimuovi effetto';
   removeBtn.addEventListener('click', () => row.remove());
 
-  function updateAmountVisibility() {
+  function updateParamVisibility() {
     const actionDef = ACTIONS.find(a => a.value === actionSel.value);
-    amountWrap.classList.toggle('hidden', !actionDef?.params.includes('amount'));
+    const ps = actionDef?.params ?? [];
+    amountWrap.classList.toggle('hidden', !ps.includes('amount'));
+    destWrap.classList.toggle('hidden',   !ps.includes('destinazione'));
   }
 
-  actionSel.addEventListener('change', updateAmountVisibility);
-  updateAmountVisibility();
+  actionSel.addEventListener('change', updateParamVisibility);
+  updateParamVisibility();
 
   row.appendChild(triggerSel);
   row.appendChild(actionSel);
   row.appendChild(targetSel);
   row.appendChild(amountWrap);
+  row.appendChild(destWrap);
   row.appendChild(removeBtn);
   return row;
 }
@@ -102,14 +121,16 @@ function buildEffectRow(effect = {}) {
 function collectEffects() {
   const rows = $('ce-effects-list').querySelectorAll('.ce-effect-row');
   return Array.from(rows).map(row => {
-    const trigger  = row.querySelector('.ce-sel-trigger')?.value;
-    const action   = row.querySelector('.ce-sel-action')?.value;
-    const target   = row.querySelector('.ce-sel-target')?.value;
-    const amountEl = row.querySelector('.ce-amount-input');
+    const trigger   = row.querySelector('.ce-sel-trigger')?.value;
+    const action    = row.querySelector('.ce-sel-action')?.value;
+    const target    = row.querySelector('.ce-sel-target')?.value;
+    const amountEl  = row.querySelector('.ce-amount-input');
+    const destEl    = row.querySelector('.ce-sel-dest');
     const actionDef = ACTIONS.find(a => a.value === action);
-    const params    = actionDef?.params.includes('amount')
-      ? { amount: Number(amountEl?.value ?? 0) }
-      : {};
+    const ps        = actionDef?.params ?? [];
+    const params    = {};
+    if (ps.includes('amount'))       params.amount       = Number(amountEl?.value ?? 0);
+    if (ps.includes('destinazione')) params.destinazione = destEl?.value ?? 'mano';
     return { trigger, action, target, params };
   });
 }

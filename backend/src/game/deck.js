@@ -3,11 +3,20 @@
 const { v4: uuidv4 } = require('uuid');
 const store          = require('../store');
 
-/** How many copies of each rarity go into one deck. */
+/** Copies per rarity for personaggi. */
 const RARITY_COPIES = {
   comune:      4,
   raro:        3,
   epico:       2,
+  mitico:      1,
+  leggendario: 1,
+};
+
+/** Artefatti use fewer copies regardless of rarity. */
+const ARTEFATTO_COPIES = {
+  comune:      2,
+  raro:        2,
+  epico:       1,
   mitico:      1,
   leggendario: 1,
 };
@@ -36,7 +45,8 @@ function createDeck() {
 
   for (const def of store.cards.values()) {
     if (!def.active) continue;
-    const copies = RARITY_COPIES[def.rarity] ?? 1;
+    const copyTable = def.type === 'artefatto' ? ARTEFATTO_COPIES : RARITY_COPIES;
+    const copies    = copyTable[def.rarity] ?? 1;
     for (let i = 0; i < copies; i++) {
       deck.push({ ...def, uid: uuidv4() });
     }

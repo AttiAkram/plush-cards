@@ -3,108 +3,80 @@
 /**
  * Effects execution engine.
  *
- * executeEffects(gs, sourceUsername, trigger, sourceCard?)
- *   → { results: EffectResult[], dirtyPlayers: Set<string> }
+ * executeEffects(gs, actorUsername, trigger, sourceCard?)
+ *   → { results: string[], dirtyPlayers: Set<string> }
  *
- * `dirtyPlayers` contains usernames whose hand/deck changed — callers must
- * send them private `hand_updated` events.
+ * `dirtyPlayers` — usernames whose hand/deckCount changed;
+ *   callers must send them a private `hand_updated` socket event.
+ *
+ * ALL_FINE_TURNO / ALL_INIZIO_TURNO fire only for cards owned by `actorUsername`.
+ * ON_MORTE is handled internally: when a card is killed by DANNO_A_CARTA, its
+ *   ON_MORTE effects run before the card is removed from the field, so that
+ *   SPOSTA_CARTA_DI_ZONA can move it (e.g. back to hand) instead of discarding.
  */
 
 // ── Target resolution ──────────────────────────────────────────────────────────
 
-/**
- * Returns an array of { username, card?, slotIndex? } resolved targets.
- *
- * @param {object} gs
- * @param {string} actorUsername
- * @param {string} target
- * @param {object} [sourceCard]  - the card that owns the effect (for SE_STESSO)
- * @returns {Array<{username:string, card?:object, slotIndex?:number}>}
- */
 function resolveTargets(gs, actorUsername, target, sourceCard) {
-  const opponentNames = gs.turnOrder.filter(u => u !== actorUsername);
+  const opponents = gs.turnOrder.filter(u => u !== actorUsername);
 
   switch (target) {
     case 'SE_STESSO': {
       if (!sourceCard) return [];
-      // Find which slot it's in on the actor's field
       const myState = gs.players[actorUsername];
-      const idx     = myState?.field.findIndex(c => c?.uid === sourceCard.uid);
+      const idx = myState?.field.findIndex(c => c?.uid === sourceCard.uid);
       if (idx === undefined || idx === -1) return [{ username: actorUsername }];
       return [{ username: actorUsername, card: sourceCard, slotIndex: idx }];
     }
 
     case 'UN_TUO_PERSONAGGIO': {
-      const myState  = gs.players[actorUsername];
-      const occupied = myState?.field
-        .map((c, i) => ({ card: c, slotIndex: i }))
-        .filter(({ card }) => card !== null);
-      if (!occupied?.length) return [];
-      // Pick random one
-      const pick = occupied[Math.floor(Math.random() * occupied.length)];
-      return [{ username: actorUsername, ...pick }];
+      const occupied = fieldSlots(gs.players[actorUsername], actorUsername);
+      if (!occupied.length) return [];
+      return [occupied[Math.floor(Math.random() * occupied.length)]];
     }
 
     case 'UN_NEMICO': {
-      for (const opp of opponentNames) {
-        const oppState = gs.players[opp];
-        const occupied = oppState?.field
-          .map((c, i) => ({ card: c, slotIndex: i }))
-          .filter(({ card }) => card !== null);
-        if (occupied?.length) {
-          const pick = occupied[Math.floor(Math.random() * occupied.length)];
-          return [{ username: opp, ...pick }];
-        }
+      for (const opp of opponents) {
+        const occupied = fieldSlots(gs.players[opp], opp);
+        if (occupied.length) return [occupied[Math.floor(Math.random() * occupied.length)]];
       }
       return [];
     }
 
-    case 'TUTTI_I_TUOI': {
-      const myState = gs.players[actorUsername];
-      return (myState?.field || [])
-        .map((c, i) => ({ card: c, slotIndex: i }))
-        .filter(({ card }) => card !== null)
-        .map(({ card, slotIndex }) => ({ username: actorUsername, card, slotIndex }));
-    }
+    case 'TUTTI_I_TUOI':
+      return fieldSlots(gs.players[actorUsername], actorUsername);
 
     case 'TUTTI_I_NEMICI': {
       const out = [];
-      for (const opp of opponentNames) {
-        const oppState = gs.players[opp];
-        const rows = (oppState?.field || [])
-          .map((c, i) => ({ card: c, slotIndex: i }))
-          .filter(({ card }) => card !== null)
-          .map(({ card, slotIndex }) => ({ username: opp, card, slotIndex }));
-        out.push(...rows);
-      }
+      for (const opp of opponents) out.push(...fieldSlots(gs.players[opp], opp));
       return out;
     }
 
     case 'ARTEFATTO_TUO':
     case 'ARTEFATTO_NEMICO':
-      // Artefact system not yet implemented — no-op
-      return [];
+      return []; // artefact targeting — future work
 
     default:
       return [];
   }
 }
 
+/** Helper: all non-null slots on a player's field as resolved targets. */
+function fieldSlots(pState, username) {
+  if (!pState) return [];
+  return pState.field
+    .map((card, slotIndex) => ({ username, card, slotIndex }))
+    .filter(({ card }) => card !== null);
+}
+
 // ── Action handlers ────────────────────────────────────────────────────────────
 
 /**
- * Apply a single action to a resolved target.
- * Returns a human-readable result string or null if nothing happened.
- *
- * @param {object} gs
- * @param {string} actorUsername
- * @param {string} action
- * @param {{ username:string, card?:object, slotIndex?:number }} resolved
- * @param {object} params
- * @param {Set<string>} dirtyPlayers
- * @returns {string|null}
+ * Apply one action to one resolved target.
+ * `pendingDeaths` is pushed to when a card's HP reaches 0 (processed later).
+ * Returns a human-readable log line, or null if nothing happened.
  */
-function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers) {
+function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers, pendingDeaths) {
   const { username: targetUser, card, slotIndex } = resolved;
   const targetState = gs.players[targetUser];
   if (!targetState) return null;
@@ -113,40 +85,34 @@ function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers) 
 
     case 'PESCA_CARTE': {
       const amount = Math.max(1, params.amount ?? 1);
-      const drawn  = [];
+      let drawn = 0;
       for (let i = 0; i < amount; i++) {
         const c = targetState.deck.pop();
         if (!c) break;
         targetState.hand.push(c);
-        drawn.push(c.name);
+        drawn++;
       }
-      targetState.deckCount = targetState.deck.length;
-      if (drawn.length) dirtyPlayers.add(targetUser);
-      return drawn.length
-        ? `${targetUser} pesca ${drawn.length} carta${drawn.length > 1 ? 'e' : ''}`
+      if (drawn) dirtyPlayers.add(targetUser);
+      return drawn
+        ? `${targetUser} pesca ${drawn} carta${drawn > 1 ? 'e' : ''}`
         : `${targetUser} cerca di pescare ma il mazzo è vuoto`;
     }
 
     case 'DANNO_A_CARTA': {
       if (!card || slotIndex === undefined) return null;
-      const amount   = params.amount ?? 1;
+      const amount = params.amount ?? 1;
       card.currentHp = (card.currentHp ?? card.hp) - amount;
-
-      let msg = `${card.name} subisce ${amount} danno${amount > 1 ? 'i' : ''}`;
-
-      // Destroy card if HP reaches 0
+      const msg = `${card.name} subisce ${amount} danno${amount > 1 ? 'i' : ''}`;
       if (card.currentHp <= 0) {
-        targetState.field[slotIndex] = null;
-        targetState.discard.push({ ...card });
-        msg += ` ed è distrutto`;
+        // Don't remove from field yet — ON_MORTE may redirect the card
+        pendingDeaths.push({ card, username: targetUser, slotIndex });
+        return msg + ' ed è distrutto';
       }
-
       return msg;
     }
 
     case 'DANNO_A_ARTEFATTO':
-      // Artefact system not yet implemented
-      return null;
+      return null; // future
 
     case 'MODIFICA_ATTACCO': {
       if (!card) return null;
@@ -157,81 +123,141 @@ function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers) 
 
     case 'MODIFICA_VITA': {
       if (!card) return null;
-      const delta    = params.amount ?? 0;
+      const delta = params.amount ?? 0;
       card.currentHp = Math.max(1, (card.currentHp ?? card.hp) + delta);
       return `${card.name}: vita ${delta >= 0 ? '+' : ''}${delta} → ${card.currentHp}`;
     }
 
-    case 'SPOSTA_CARTA_DI_ZONA':
-      // Zone system stub — not yet implemented
-      return null;
+    case 'SPOSTA_CARTA_DI_ZONA': {
+      if (!card || slotIndex === undefined) return null;
+      const dest = params.destinazione ?? 'scarti';
+
+      // Remove from current field slot
+      targetState.field[slotIndex] = null;
+
+      // Prepare a clean copy (strip runtime flags)
+      const cleanCard = { ...card };
+      delete cleanCard._pendingDeath;
+
+      if (dest === 'mano') {
+        cleanCard.currentHp = cleanCard.hp; // reset HP on return to hand
+        targetState.hand.push(cleanCard);
+        dirtyPlayers.add(targetUser);
+        return `${card.name} torna in mano`;
+      }
+      if (dest === 'vuoto') {
+        gs.zones.void.push(cleanCard);
+        return `${card.name} inviato nel Vuoto`;
+      }
+      if (dest === 'assoluto') {
+        gs.zones.absolute.push(cleanCard);
+        return `${card.name} inviato nell'Assoluto`;
+      }
+      // default: scarti
+      targetState.discard.push(cleanCard);
+      return `${card.name} inviato agli Scarti`;
+    }
 
     case 'SCAMBIA_POSIZIONI_CAMPO': {
-      // Swap two random occupied field slots for the target player
       const myState  = gs.players[actorUsername];
-      const occupied = myState?.field
-        .map((c, i) => i)
-        .filter(i => myState.field[i] !== null);
+      const occupied = (myState?.field || []).map((c, i) => i).filter(i => myState.field[i] !== null);
       if (occupied.length < 2) return null;
       const [a, b] = occupied.sort(() => Math.random() - 0.5).slice(0, 2);
       [myState.field[a], myState.field[b]] = [myState.field[b], myState.field[a]];
-      return `${actorUsername} scambia posizioni sul campo`;
+      return `${actorUsername} scambia le posizioni sul campo`;
     }
 
     case 'ABILITA_TRIGGER_GLOBALI':
-      // Global trigger system — future work
-      return null;
+      return null; // future
 
     default:
       return null;
   }
 }
 
+// ── Inner execution (no death processing) ────────────────────────────────────
+
+/**
+ * Fire effects for `trigger` across `candidates`, writing deaths into
+ * `pendingDeaths`. Returns results + dirtyPlayers.
+ */
+function _inner(gs, trigger, candidates, dirtyPlayers, pendingDeaths) {
+  const results = [];
+  for (const { card, owner } of candidates) {
+    if (!card.effects?.length) continue;
+    for (const effect of card.effects) {
+      if (effect.trigger !== trigger) continue;
+      const targets = resolveTargets(gs, owner, effect.target, card);
+      for (const t of targets) {
+        const msg = applyAction(gs, owner, effect.action, t, effect.params ?? {}, dirtyPlayers, pendingDeaths);
+        if (msg) results.push(msg);
+      }
+    }
+  }
+  return results;
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Fire all effects matching `trigger` across relevant cards in the game state.
+ * Fire all effects matching `trigger`.
  *
- * For `QUANDO_GIOCATA` / `QUANDO_DICHIARA` / `ON_MORTE`:  pass `sourceCard`.
- * For `ALL_INIZIO_TURNO` / `ALL_FINE_TURNO`:              sourceCard is unused;
- *   the engine iterates all cards on the field of the current-turn player.
- * For `PASSIVO_SE_IN_CAMPO`:                              same as ALL_.
+ * Pass `sourceCard` for card-specific triggers (QUANDO_GIOCATA, ON_MORTE).
+ * For turn triggers (ALL_FINE_TURNO, ALL_INIZIO_TURNO) leave sourceCard null;
+ * the engine iterates all cards owned by `actorUsername` (the turn player).
  *
- * @param {object} gs              - live game state (mutated in place)
- * @param {string} actorUsername   - player who owns the triggering context
- * @param {string} trigger
- * @param {object} [sourceCard]    - the specific card that fired (for card-specific triggers)
+ * @param {object}  gs
+ * @param {string}  actorUsername  - whose turn it is / who played the card
+ * @param {string}  trigger
+ * @param {object}  [sourceCard]
  * @returns {{ results: string[], dirtyPlayers: Set<string> }}
  */
 function executeEffects(gs, actorUsername, trigger, sourceCard) {
   const results      = [];
   const dirtyPlayers = new Set();
+  const pendingDeaths = [];
 
-  // Collect (card, ownerUsername) pairs whose effects we should check
-  const candidates = [];
-
+  // Build candidate list
+  let candidates;
   if (sourceCard) {
-    // Only effects on this specific card
-    candidates.push({ card: sourceCard, owner: actorUsername });
+    candidates = [{ card: sourceCard, owner: actorUsername }];
   } else {
-    // All cards currently on any player's field
-    for (const [username, pState] of Object.entries(gs.players)) {
-      for (const card of pState.field) {
-        if (card) candidates.push({ card, owner: username });
-      }
-    }
+    // Turn-scoped triggers: only the turn player's field cards
+    const pState = gs.players[actorUsername];
+    candidates = pState
+      ? (pState.field || []).filter(Boolean).map(card => ({ card, owner: actorUsername }))
+      : [];
   }
 
-  for (const { card, owner } of candidates) {
-    if (!card.effects?.length) continue;
+  results.push(..._inner(gs, trigger, candidates, dirtyPlayers, pendingDeaths));
 
-    for (const effect of card.effects) {
-      if (effect.trigger !== trigger) continue;
+  // ── Process deaths ──────────────────────────────────────────────────────────
+  // Fire ON_MORTE for each killed card while it's still conceptually "on field",
+  // then resolve its fate (SPOSTA_CARTA_DI_ZONA may have moved it already).
+  for (const { card, username, slotIndex } of pendingDeaths) {
+    const pState = gs.players[username];
+    if (!pState) continue;
 
-      const resolved = resolveTargets(gs, owner, effect.target, card);
-      for (const target of resolved) {
-        const msg = applyAction(gs, owner, effect.action, target, effect.params ?? {}, dirtyPlayers);
-        if (msg) results.push(msg);
+    // Fire ON_MORTE effects on the dying card
+    const deathPending = [];
+    const deathResults = _inner(gs, 'ON_MORTE', [{ card, owner: username }], dirtyPlayers, deathPending);
+    results.push(...deathResults);
+
+    // If card is still in that field slot (ON_MORTE didn't move it), discard it
+    if (pState.field[slotIndex] === card) {
+      pState.field[slotIndex] = null;
+      const clean = { ...card };
+      delete clean._pendingDeath;
+      pState.discard.push(clean);
+    }
+
+    // Handle any secondary deaths from ON_MORTE chain (max 1 level for now)
+    for (const secondary of deathPending) {
+      const sp = gs.players[secondary.username];
+      if (!sp) continue;
+      if (sp.field[secondary.slotIndex] === secondary.card) {
+        sp.field[secondary.slotIndex] = null;
+        sp.discard.push({ ...secondary.card });
       }
     }
   }

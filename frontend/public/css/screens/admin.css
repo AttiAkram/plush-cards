@@ -474,6 +474,8 @@
   font-size: 12px;
 }
 
+.ce-sel-dest { min-width: 90px; }
+
 /* select input (shared with form) */
 .select-input {
   width:         100%;
