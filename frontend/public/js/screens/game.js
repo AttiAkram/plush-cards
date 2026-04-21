@@ -22,12 +22,92 @@ import { endTurn, playCard, requestValidSlots,
 let draggingCardUid   = null;
 let currentValidSlots = [];
 
+// ── Touch state ───────────────────────────────────────────────────────────────
+
+let _touchStartCard  = null;   // { uid, el, startX, startY } while finger is down
+let _touchHoldTimer  = null;
+let _touchDragging   = false;
+let _ghostEl         = null;
+let _tapSelectUid    = null;   // uid of hand card currently in tap-select mode
+let _tapSelectCard   = null;   // card object for the tap-selected card
+let _currentModalCard = null;  // card object currently shown in the inspect modal
+
+const _HOLD_MS     = 280;
+const _TAP_MOVE_PX = 10;
+
 // ── Rarity labels ─────────────────────────────────────────────────────────────
 
 const RARITY_LABELS = {
   comune: 'Comune', raro: 'Raro', epico: 'Epico',
   mitico: 'Mitico', leggendario: 'Leggendario',
 };
+
+// ── Ghost card helpers (touch drag) ──────────────────────────────────────────
+
+function _createGhost(sourceEl, cx, cy) {
+  const r     = sourceEl.getBoundingClientRect();
+  const clone = sourceEl.cloneNode(true);
+  clone.removeAttribute('id');
+  Object.assign(clone.style, {
+    position:      'fixed',
+    pointerEvents: 'none',
+    zIndex:        '9999',
+    width:         `${r.width}px`,
+    height:        `${r.height}px`,
+    left:          `${cx - r.width / 2}px`,
+    top:           `${cy - r.height / 2}px`,
+    transform:     'scale(1.12) rotate(4deg)',
+    boxShadow:     '0 18px 44px rgba(0,0,0,0.28)',
+    opacity:       '0.95',
+    transition:    'none',
+  });
+  document.body.appendChild(clone);
+  return clone;
+}
+
+function _moveGhost(cx, cy) {
+  if (!_ghostEl) return;
+  _ghostEl.style.left = `${cx - parseFloat(_ghostEl.style.width)  / 2}px`;
+  _ghostEl.style.top  = `${cy - parseFloat(_ghostEl.style.height) / 2}px`;
+}
+
+function _removeGhost() { _ghostEl?.remove(); _ghostEl = null; }
+
+// ── Tap-select mode helpers ───────────────────────────────────────────────────
+
+function exitTapSelectMode() {
+  if (!_tapSelectUid) return;
+  _tapSelectUid = _tapSelectCard = null;
+  $('player-hand').querySelectorAll('[data-uid]').forEach(el => el.classList.remove('tap-selected'));
+  clearSlotHighlights();
+}
+
+function enterTapSelectMode(uid, card) {
+  if (_tapSelectUid === uid) {
+    // Second tap on same card → deselect + open inspect modal
+    exitTapSelectMode();
+    openCardModal(card);
+    return;
+  }
+  exitTapSelectMode();
+  _tapSelectUid  = uid;
+  _tapSelectCard = card;
+  $('player-hand').querySelectorAll('[data-uid]').forEach(el =>
+    el.classList.toggle('tap-selected', el.dataset.uid === uid));
+  currentValidSlots = [];
+  requestValidSlots(uid);
+}
+
+// ── Find the field slot under a touch point ───────────────────────────────────
+
+function _slotUnderPoint(cx, cy) {
+  const field = $('player-field');
+  for (const el of document.elementsFromPoint(cx, cy)) {
+    const s = el.closest?.('.field-slot[data-slot]');
+    if (s && field.contains(s)) return s;
+  }
+  return null;
+}
 
 // ── Nexus (player's own) ──────────────────────────────────────────────────────
 
@@ -336,6 +416,7 @@ function showTurnBanner(text) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 function openCardModal(card) {
+  _currentModalCard = card;
   $('card-modal-art').innerHTML    = creatureArtHtml(card.id, 64);
   $('card-modal-name').textContent = card.name;
   const rarityEl = $('card-modal-rarity');
@@ -345,10 +426,20 @@ function openCardModal(card) {
     `<span class="cm-stat cm-dmg">⚔ ${card.damage}</span>
      <span class="cm-stat cm-hp">♥ ${card.hp}</span>`;
   $('card-modal-desc').textContent = card.description;
+
+  // Show "Gioca" only when it's my turn and the card is in my hand
+  const { gameState, username } = getState();
+  const isMyTurn = gameState?.currentTurn === username;
+  const inMyHand = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
+  $('card-modal-play').classList.toggle('hidden', !(isMyTurn && inMyHand));
+
   $('card-modal').classList.remove('hidden');
 }
 
-function closeCardModal() { $('card-modal').classList.add('hidden'); }
+function closeCardModal() {
+  $('card-modal').classList.add('hidden');
+  _currentModalCard = null;
+}
 
 function attachCardInspect(cardEl, card) {
   cardEl.addEventListener('click', () => openCardModal(card));
@@ -421,6 +512,7 @@ function initZonePanels() {
 // ──────────────────────────────────────────────────────────────────────────────
 
 function renderHand(cards) {
+  exitTapSelectMode();
   const hand = $('player-hand');
   hand.innerHTML = '';
   const { gameState, username } = getState();
@@ -431,7 +523,8 @@ function renderHand(cards) {
     cardEl.style.animationDelay = `${i * 0.08}s`;
     cardEl.classList.add('dealing');
     cardEl.draggable = isMyTurn;
-    attachCardInspect(cardEl, card);
+    // Desktop click → inspect modal (touch is handled by initTouchDrag delegation)
+    cardEl.addEventListener('click', () => openCardModal(card));
     hand.appendChild(cardEl);
   });
 }
@@ -506,6 +599,123 @@ function initFieldDropZones() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// TOUCH DRAG + TAP-SELECT (mobile)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function initTouchDrag() {
+  const hand  = $('player-hand');
+  const field = $('player-field');
+
+  // ── touchstart: note which card was touched, start hold timer ───────────────
+  hand.addEventListener('touchstart', e => {
+    const cardEl = e.target.closest('[data-uid]');
+    if (!cardEl) return;
+    const { gameState, username } = getState();
+    if (gameState?.currentTurn !== username) return; // not my turn → click → modal
+
+    const t = e.touches[0];
+    _touchStartCard = { uid: cardEl.dataset.uid, el: cardEl, startX: t.clientX, startY: t.clientY };
+    _touchDragging  = false;
+
+    _touchHoldTimer = setTimeout(() => {
+      // Hold threshold reached → activate drag ghost
+      _touchDragging  = true;
+      draggingCardUid = _touchStartCard.uid;
+      currentValidSlots = [];
+      exitTapSelectMode();
+      _touchStartCard.el.classList.add('dragging');
+      _ghostEl = _createGhost(_touchStartCard.el, t.clientX, t.clientY);
+      requestValidSlots(draggingCardUid);
+      navigator.vibrate?.(20);
+    }, _HOLD_MS);
+  }, { passive: true });
+
+  // ── touchmove: update ghost / cancel hold if finger moved too early ──────────
+  hand.addEventListener('touchmove', e => {
+    if (!_touchStartCard) return;
+    const t    = e.touches[0];
+    const dist = Math.hypot(t.clientX - _touchStartCard.startX, t.clientY - _touchStartCard.startY);
+
+    if (_touchDragging) {
+      e.preventDefault();
+      _moveGhost(t.clientX, t.clientY);
+      const slotEl = _slotUnderPoint(t.clientX, t.clientY);
+      field.querySelectorAll('.field-slot').forEach((s, i) => {
+        const valid = currentValidSlots.includes(i);
+        s.classList.toggle('droppable', valid && s !== slotEl);
+        s.classList.toggle('drag-over', s === slotEl && valid);
+      });
+    } else if (dist > _TAP_MOVE_PX) {
+      // Finger moved before hold → treat as scroll, cancel
+      clearTimeout(_touchHoldTimer);
+      _touchHoldTimer = null;
+      _touchStartCard = null;
+    }
+  }, { passive: false });
+
+  // ── touchend: drop card OR enter tap-select mode ─────────────────────────────
+  hand.addEventListener('touchend', e => {
+    clearTimeout(_touchHoldTimer);
+    _touchHoldTimer = null;
+    if (!_touchStartCard) return;
+    const t = e.changedTouches[0];
+
+    if (_touchDragging) {
+      e.preventDefault(); // suppress synthetic click
+      _touchDragging = false;
+      _touchStartCard.el.classList.remove('dragging');
+      _removeGhost();
+      const slotEl = _slotUnderPoint(t.clientX, t.clientY);
+      clearSlotHighlights();
+      if (slotEl) {
+        const i = parseInt(slotEl.dataset.slot, 10);
+        if (currentValidSlots.includes(i)) playCard(draggingCardUid, i);
+      }
+      draggingCardUid = null;
+    } else {
+      // Short tap → tap-select mode (prevents the synthetic click / modal)
+      e.preventDefault();
+      const gs   = getState().gameState;
+      const me   = getState().username;
+      const card = gs?.players[me]?.hand?.find(c => c.uid === _touchStartCard.uid);
+      if (card) enterTapSelectMode(_touchStartCard.uid, card);
+    }
+    _touchStartCard = null;
+  }, { passive: false });
+
+  hand.addEventListener('touchcancel', () => {
+    clearTimeout(_touchHoldTimer);
+    _touchHoldTimer = null;
+    if (_touchDragging && _touchStartCard) {
+      _touchStartCard.el.classList.remove('dragging');
+      _removeGhost();
+      clearSlotHighlights();
+      draggingCardUid = null;
+    }
+    _touchDragging = false;
+    _touchStartCard = null;
+  }, { passive: true });
+
+  // ── Field click: play card when in tap-select mode ───────────────────────────
+  field.addEventListener('click', e => {
+    if (!_tapSelectUid) return;
+    const slotEl = e.target.closest('.field-slot[data-slot]');
+    if (!slotEl) { exitTapSelectMode(); return; }
+    const i = parseInt(slotEl.dataset.slot, 10);
+    if (!currentValidSlots.includes(i)) { exitTapSelectMode(); return; }
+    const uid = _tapSelectUid;
+    exitTapSelectMode();
+    playCard(uid, i);
+  });
+
+  // ── Document click: cancel tap-select when tapping outside hand/field ────────
+  document.addEventListener('click', e => {
+    if (!_tapSelectUid) return;
+    if (!hand.contains(e.target) && !field.contains(e.target)) exitTapSelectMode();
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // FULL BOARD RENDER
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -537,11 +747,19 @@ function initGameActions() {
   $('card-modal-close').addEventListener('click', closeCardModal);
   $('card-modal-overlay').addEventListener('click', closeCardModal);
 
+  // "Gioca" button in modal → close modal + enter tap-select mode
+  $('card-modal-play').addEventListener('click', () => {
+    const card = _currentModalCard;
+    closeCardModal();
+    if (card) enterTapSelectMode(card.uid, card);
+  });
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeCardModal();
       closeZonePanel();
       closePlayerPanel();
+      exitTapSelectMode();
       return;
     }
     if (e.key === 'Enter'
@@ -558,6 +776,7 @@ function initGameActions() {
   initPlayerPanel();
   initHandDrag();
   initFieldDropZones();
+  initTouchDrag();
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -619,7 +838,8 @@ function initSocketListeners() {
   });
 
   on('socket:valid_slots', ({ cardUid, validSlots }) => {
-    if (cardUid !== draggingCardUid) return;
+    const activeUid = draggingCardUid || _tapSelectUid;
+    if (cardUid !== activeUid) return;
     currentValidSlots = validSlots;
     highlightValidSlots();
   });
