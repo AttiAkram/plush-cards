@@ -1,6 +1,7 @@
 /**
  * Game screen — all interactive mechanics:
- *   • Players status bar (replaces opponents-area)
+ *   • Players status bar + opponent fields always visible on board
+ *   • Player panel (click any pill → slide-in panel with field/nexus/zones)
  *   • Turn changed banner + End Turn pending state
  *   • Card inspect modal (click / long-press)
  *   • Drag & Drop hand → field (HTML5 DnD, event delegation)
@@ -28,7 +29,7 @@ const RARITY_LABELS = {
   mitico: 'Mitico', leggendario: 'Leggendario',
 };
 
-// ── Nexus ─────────────────────────────────────────────────────────────────────
+// ── Nexus (player's own) ──────────────────────────────────────────────────────
 
 function updateNexus(nexus) {
   $('nexus-hp-val').textContent  = nexus.hp;
@@ -36,35 +37,69 @@ function updateNexus(nexus) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// SHARED FIELD RENDERER
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Render cards into an array of existing .field-slot elements (or any container
+ * whose children you want to fill).  Works for player field, opp zones, panel.
+ *
+ * @param {(object|null)[]} slots
+ * @param {HTMLElement}      container  — element whose .field-slot children to fill,
+ *                                        OR element to append fresh slots into (useFresh)
+ * @param {boolean}          [useFresh] — if true, clears container and appends new slot divs
+ */
+function renderSlotsInto(slots, container, useFresh = false) {
+  if (useFresh) {
+    container.innerHTML = '';
+    slots.forEach(() => container.appendChild(el('div', 'field-slot')));
+  }
+  const slotEls = container.querySelectorAll('.field-slot');
+  slotEls.forEach((slotEl, i) => {
+    slotEl.innerHTML = '';
+    if (slots[i]) {
+      const cardEl = createCardEl(slots[i]);
+      attachCardInspect(cardEl, slots[i]);
+      slotEl.appendChild(cardEl);
+    } else {
+      slotEl.innerHTML = `<svg class="icon-slot" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>`;
+    }
+  });
+}
+
+// Convenience wrapper for the static player-field element
+function renderField(slots, containerId) {
+  renderSlotsInto(slots, $(containerId));
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // PLAYERS BAR
 // ──────────────────────────────────────────────────────────────────────────────
 
 const STATUS_ICONS = {
-  active:       '<span class="ps-dot ps-dot--active"></span>',
+  active:       '',
   disconnected: '<span class="ps-dot ps-dot--disc" title="Disconnesso">↯</span>',
   left:         '<span class="ps-dot ps-dot--left" title="Ha abbandonato">✕</span>',
 };
 
-/**
- * Render the top player-status bar from the full game state.
- * Shows a pill per player: avatar, name, HP bar, status, active-turn highlight.
- */
 function renderPlayersBar(gameState) {
-  const bar  = $('players-bar');
-  // Keep the Leave button (first child), clear the rest
-  const leave = bar.firstElementChild;
+  const bar   = $('players-bar');
+  const leave = bar.firstElementChild;   // keep the Leave button
   bar.innerHTML = '';
   bar.appendChild(leave);
 
   const me = getState().username;
 
   for (const username of gameState.turnOrder) {
-    const p       = gameState.players[username];
+    const p      = gameState.players[username];
     if (!p) continue;
-    const isMe    = username === me;
-    const isTurn  = gameState.currentTurn === username;
-    const status  = p.status ?? 'active';
-    const hpPct   = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const isMe   = username === me;
+    const isTurn = gameState.currentTurn === username;
+    const status = p.status ?? 'active';
+    const hpPct  = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
 
     const pill = el('div',
       `player-pill${isTurn ? ' is-turn' : ''}${isMe ? ' is-me' : ''} status-${status}`);
@@ -72,16 +107,177 @@ function renderPlayersBar(gameState) {
     pill.innerHTML = `
       <div class="player-avatar">${escHtml(username[0].toUpperCase())}</div>
       <div class="player-pill-body">
-        <div class="player-pill-name">${escHtml(username)}${isMe ? ' <span class="you-badge">tu</span>' : ''}</div>
+        <div class="player-pill-name">
+          ${escHtml(username)}
+          ${isMe ? '<span class="you-badge">tu</span>' : ''}
+        </div>
         <div class="player-pill-hp">
           <div class="player-hp-bar"><div class="player-hp-fill" style="width:${hpPct}%"></div></div>
           <span class="player-hp-text">${p.nexus.hp}</span>
         </div>
       </div>
-      ${STATUS_ICONS[status] ?? STATUS_ICONS.active}`;
+      ${STATUS_ICONS[status] ?? ''}`;
+
+    // Clicking any pill opens that player's panel
+    pill.style.cursor = 'pointer';
+    pill.addEventListener('click', () => openPlayerPanel(username, getState().gameState));
 
     bar.appendChild(pill);
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// OPPONENTS AREA — always visible on the main board
+// ──────────────────────────────────────────────────────────────────────────────
+
+function renderOpponentsArea(gameState) {
+  const area   = $('opponents-area');
+  area.innerHTML = '';
+  const myName = getState().username;
+
+  for (const username of gameState.turnOrder) {
+    if (username === myName) continue;
+    const p = gameState.players[username];
+    if (!p) continue;
+
+    const hpPct    = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const isActive = gameState.currentTurn === username;
+    const zone     = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}`);
+
+    // Header: name + HP bar
+    zone.innerHTML = `
+      <div class="opp-zone-header">
+        <span class="opp-zone-name">${escHtml(username)}</span>
+        <div class="opp-zone-hp">
+          <div class="opp-hp-bar"><div class="opp-hp-fill" style="width:${hpPct}%"></div></div>
+          <span class="opp-hp-text">♥ ${p.nexus.hp}</span>
+        </div>
+      </div>`;
+
+    // Field row with cards (clickable)
+    const fieldRow = el('div', 'opp-zone-field');
+    p.field.forEach(card => {
+      const slotEl = el('div', 'field-slot');
+      if (card) {
+        const cardEl = createCardEl(card);
+        attachCardInspect(cardEl, card);
+        slotEl.appendChild(cardEl);
+      } else {
+        slotEl.innerHTML = `<svg class="icon-slot" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>`;
+      }
+      fieldRow.appendChild(slotEl);
+    });
+    zone.appendChild(fieldRow);
+
+    // Clicking the zone header/name opens the player panel for that opponent
+    zone.querySelector('.opp-zone-header').addEventListener('click', () => {
+      openPlayerPanel(username, getState().gameState);
+    });
+
+    area.appendChild(zone);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PLAYER PANEL
+// ──────────────────────────────────────────────────────────────────────────────
+
+let _panelUsername = null;
+
+function openPlayerPanel(username, gameState) {
+  if (!gameState) return;
+  _panelUsername = username;
+  const p    = gameState.players[username];
+  if (!p) return;
+  const isMe = username === getState().username;
+
+  // Header
+  $('pp-avatar').textContent = username[0].toUpperCase();
+  $('pp-name').textContent   = username;
+
+  // Nexus
+  const hpPct = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+  $('pp-nexus').innerHTML = `
+    <div class="pp-nexus-card">
+      <div class="pp-nexus-icon">
+        <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2L4 9v13c0 10 7.2 19.4 16 22 8.8-2.6 16-12 16-22V9L20 2z"
+            fill="#E8E8E8" stroke="#BDBDBD" stroke-width="1.5"/>
+          <path d="M16 22l3 3 6-6" stroke="#606060" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="pp-nexus-info">
+        <div class="pp-nexus-hp-bar">
+          <div class="pp-nexus-hp-fill" style="width:${hpPct}%"></div>
+        </div>
+        <span class="pp-nexus-hp-text">♥ ${p.nexus.hp} / ${p.nexus.maxHp}</span>
+      </div>
+    </div>`;
+
+  // Field
+  renderSlotsInto(p.field, $('pp-field'), true);
+
+  // Zone counts (discard is per-player; void/absolute are global)
+  $('pp-zone-discard-count').textContent  = p.discard?.length ?? 0;
+  $('pp-zone-void-count').textContent     = gameState.zones?.void?.length ?? 0;
+  $('pp-zone-absolute-count').textContent = gameState.zones?.absolute?.length ?? 0;
+
+  // Hand section: visible for self only (opponents' hands are hidden)
+  const handSection = $('pp-hand-section');
+  if (isMe) {
+    handSection.classList.remove('hidden');
+    const handContainer = $('pp-hand-cards');
+    handContainer.innerHTML = '';
+    p.hand.forEach(card => {
+      const cardEl = createCardEl(card);
+      attachCardInspect(cardEl, card);
+      handContainer.appendChild(cardEl);
+    });
+  } else {
+    handSection.classList.add('hidden');
+  }
+
+  // Slide in
+  const panel = $('player-panel');
+  panel.classList.remove('hidden');
+  requestAnimationFrame(() => panel.classList.add('panel-open'));
+}
+
+function closePlayerPanel() {
+  const panel = $('player-panel');
+  panel.classList.remove('panel-open');
+  setTimeout(() => { panel.classList.add('hidden'); _panelUsername = null; }, 300);
+}
+
+/** If the panel is open for `username`, refresh its content silently. */
+function refreshPanelIfOpen(username, gameState) {
+  if (_panelUsername === username
+      && !$('player-panel').classList.contains('hidden')) {
+    openPlayerPanel(username, gameState);
+  }
+}
+
+function initPlayerPanel() {
+  $('pp-close').addEventListener('click', closePlayerPanel);
+  $('player-panel-overlay').addEventListener('click', closePlayerPanel);
+
+  // Zone buttons inside the panel — open zone panel for the panel's player
+  $('pp-zone-discard').addEventListener('click', () => {
+    const gs = getState().gameState;
+    if (gs && _panelUsername) openZonePanel('discard', gs, _panelUsername);
+  });
+  $('pp-zone-void').addEventListener('click', () => {
+    const gs = getState().gameState;
+    if (gs && _panelUsername) openZonePanel('void', gs, _panelUsername);
+  });
+  $('pp-zone-absolute').addEventListener('click', () => {
+    const gs = getState().gameState;
+    if (gs && _panelUsername) openZonePanel('absolute', gs, _panelUsername);
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -92,7 +288,6 @@ function updateTurnInfo(gameState) {
   const isMe = gameState.currentTurn === getState().username;
   $('turn-number').textContent = `Turno ${gameState.turnNumber}`;
   $('turn-player').textContent = isMe ? 'Turno tuo!' : gameState.currentTurn;
-
   const badge = $('turn-badge');
   if (badge) badge.classList.toggle('my-turn', isMe);
 }
@@ -100,7 +295,7 @@ function updateTurnInfo(gameState) {
 function setEndTurnPending(pending) {
   const btn = $('btn-end-turn');
   if (pending) {
-    btn.disabled   = true;
+    btn.disabled    = true;
     btn.textContent = 'In attesa…';
     btn.classList.add('pending');
   } else {
@@ -127,10 +322,8 @@ function showTurnBanner(text) {
   const banner = $('turn-banner');
   $('turn-banner-text').textContent = text;
   banner.classList.remove('hidden', 'banner-hide');
-  // force reflow so the transition fires
-  banner.offsetWidth; // eslint-disable-line no-unused-expressions
+  banner.offsetWidth; // eslint-disable-line
   banner.classList.add('banner-show');
-
   _bannerTimer = setTimeout(() => {
     banner.classList.remove('banner-show');
     banner.classList.add('banner-hide');
@@ -145,11 +338,9 @@ function showTurnBanner(text) {
 function openCardModal(card) {
   $('card-modal-art').innerHTML    = creatureArtHtml(card.id, 64);
   $('card-modal-name').textContent = card.name;
-
   const rarityEl = $('card-modal-rarity');
   rarityEl.textContent = RARITY_LABELS[card.rarity] ?? card.rarity;
   rarityEl.className   = `card-modal-rarity rarity-${card.rarity}`;
-
   $('card-modal-stats').innerHTML =
     `<span class="cm-stat cm-dmg">⚔ ${card.damage}</span>
      <span class="cm-stat cm-hp">♥ ${card.hp}</span>`;
@@ -177,27 +368,29 @@ const ZONE_TITLES = { discard: 'Scarti', void: 'Vuoto', absolute: 'Assoluto' };
 
 function updateZoneCounts(gameState) {
   const me = getState().username;
-  // discard: show my own discard count
-  const discardCount = gameState.players[me]?.discard?.length ?? 0;
-  const voidCount    = gameState.zones?.void?.length ?? 0;
-  const absCount     = gameState.zones?.absolute?.length ?? 0;
-
-  $('zone-count-discard').textContent  = discardCount;
-  $('zone-count-void').textContent     = voidCount;
-  $('zone-count-absolute').textContent = absCount;
+  $('zone-count-discard').textContent  = gameState.players[me]?.discard?.length ?? 0;
+  $('zone-count-void').textContent     = gameState.zones?.void?.length ?? 0;
+  $('zone-count-absolute').textContent = gameState.zones?.absolute?.length ?? 0;
 }
 
-function openZonePanel(zoneName, gameState) {
-  const me    = getState().username;
+/**
+ * @param {string} zoneName
+ * @param {object} gameState
+ * @param {string} [targetUsername]  — whose discard to show (defaults to self)
+ */
+function openZonePanel(zoneName, gameState, targetUsername) {
+  const username = targetUsername ?? getState().username;
   let cards;
-  if (zoneName === 'discard')  cards = gameState.players[me]?.discard  ?? [];
-  else if (zoneName === 'void')      cards = gameState.zones?.void     ?? [];
-  else                               cards = gameState.zones?.absolute ?? [];
+  if (zoneName === 'discard')  cards = gameState.players[username]?.discard ?? [];
+  else if (zoneName === 'void') cards = gameState.zones?.void ?? [];
+  else                          cards = gameState.zones?.absolute ?? [];
 
-  $('zone-panel-title').textContent = ZONE_TITLES[zoneName] ?? zoneName;
+  const titleSuffix = targetUsername && targetUsername !== getState().username
+    ? ` di ${targetUsername}` : '';
+  $('zone-panel-title').textContent = (ZONE_TITLES[zoneName] ?? zoneName) + titleSuffix;
+
   const container = $('zone-panel-cards');
   container.innerHTML = '';
-
   if (!cards.length) {
     container.innerHTML = '<p class="zone-panel-empty">Nessuna carta</p>';
   } else {
@@ -207,14 +400,13 @@ function openZonePanel(zoneName, gameState) {
       container.appendChild(cardEl);
     });
   }
-
   $('zone-panel').classList.remove('hidden');
 }
 
 function closeZonePanel() { $('zone-panel').classList.add('hidden'); }
 
 function initZonePanels() {
-  document.querySelectorAll('.zone-stack').forEach(btn => {
+  document.querySelectorAll('.zone-stack:not(.pp-zone-btn)').forEach(btn => {
     btn.addEventListener('click', () => {
       const gs = getState().gameState;
       if (gs) openZonePanel(btn.dataset.zone, gs);
@@ -233,7 +425,6 @@ function renderHand(cards) {
   hand.innerHTML = '';
   const { gameState, username } = getState();
   const isMyTurn = gameState?.currentTurn === username;
-
   cards.forEach((card, i) => {
     const cardEl = createCardEl(card);
     cardEl.dataset.uid          = card.uid;
@@ -246,7 +437,7 @@ function renderHand(cards) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// FIELD
+// DRAG & DROP — player field only (event delegation)
 // ──────────────────────────────────────────────────────────────────────────────
 
 function highlightValidSlots() {
@@ -261,55 +452,13 @@ function clearSlotHighlights() {
   });
 }
 
-function renderField(slots, containerId) {
-  $(containerId).querySelectorAll('.field-slot').forEach((slotEl, i) => {
-    slotEl.innerHTML = '';
-    if (slots[i]) {
-      const cardEl = createCardEl(slots[i]);
-      attachCardInspect(cardEl, slots[i]);
-      slotEl.appendChild(cardEl);
-    } else {
-      slotEl.innerHTML = `<svg class="icon-slot" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>`;
-    }
-  });
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// FULL BOARD RENDER
-// ──────────────────────────────────────────────────────────────────────────────
-
-export function renderGameBoard(gameState) {
-  setState({ gameState });
-  const myState = gameState.players[getState().username];
-  if (!myState) return;
-
-  renderPlayersBar(gameState);
-  updateTurnInfo(gameState);
-  updateEndTurnBtn(gameState);
-  updateZoneCounts(gameState);
-
-  $('deck-count').textContent = `${myState.deckCount} carte`;
-  updateNexus(myState.nexus);
-  renderHand(myState.hand);
-  renderField(myState.field, 'player-field');
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// DRAG & DROP (event delegation)
-// ──────────────────────────────────────────────────────────────────────────────
-
 function initHandDrag() {
   const hand = $('player-hand');
-
   hand.addEventListener('dragstart', e => {
     const cardEl = e.target.closest('[data-uid]');
     if (!cardEl) return;
     const { gameState, username } = getState();
     if (gameState?.currentTurn !== username) return;
-
     draggingCardUid   = cardEl.dataset.uid;
     currentValidSlots = [];
     cardEl.classList.add('dragging');
@@ -317,7 +466,6 @@ function initHandDrag() {
     requestValidSlots(draggingCardUid);
     setTimeout(highlightValidSlots, 60);
   });
-
   hand.addEventListener('dragend', e => {
     const cardEl = e.target.closest('[data-uid]');
     if (cardEl) cardEl.classList.remove('dragging');
@@ -328,7 +476,6 @@ function initHandDrag() {
 
 function initFieldDropZones() {
   const field = $('player-field');
-
   field.addEventListener('dragover', e => {
     const slotEl = e.target.closest('.field-slot');
     if (!slotEl || !draggingCardUid) return;
@@ -341,13 +488,11 @@ function initFieldDropZones() {
       s.classList.toggle('drag-over', s === slotEl);
     });
   });
-
   field.addEventListener('dragleave', e => {
     const slotEl = e.target.closest('.field-slot');
     if (slotEl && !slotEl.contains(e.relatedTarget))
       slotEl.classList.remove('drag-over');
   });
-
   field.addEventListener('drop', e => {
     const slotEl = e.target.closest('.field-slot');
     if (!slotEl || !draggingCardUid) return;
@@ -361,31 +506,48 @@ function initFieldDropZones() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// FULL BOARD RENDER
+// ──────────────────────────────────────────────────────────────────────────────
+
+export function renderGameBoard(gameState) {
+  setState({ gameState });
+  const myState = gameState.players[getState().username];
+  if (!myState) return;
+
+  renderPlayersBar(gameState);
+  renderOpponentsArea(gameState);
+  updateTurnInfo(gameState);
+  updateEndTurnBtn(gameState);
+  updateZoneCounts(gameState);
+
+  $('deck-count').textContent = `${myState.deckCount} carte`;
+  updateNexus(myState.nexus);
+  renderHand(myState.hand);
+  renderField(myState.field, 'player-field');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // ACTION BUTTONS + KEYBOARD
 // ──────────────────────────────────────────────────────────────────────────────
 
 function initGameActions() {
-  $('btn-end-turn').addEventListener('click', () => {
-    setEndTurnPending(true);
-    endTurn();
-  });
-
+  $('btn-end-turn').addEventListener('click', () => { setEndTurnPending(true); endTurn(); });
   $('btn-leave-match').addEventListener('click', () => leaveMatch());
 
-  // Card modal
   $('card-modal-close').addEventListener('click', closeCardModal);
   $('card-modal-overlay').addEventListener('click', closeCardModal);
 
-  // Keyboard
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeCardModal();
       closeZonePanel();
+      closePlayerPanel();
       return;
     }
     if (e.key === 'Enter'
         && $('card-modal').classList.contains('hidden')
         && $('zone-panel').classList.contains('hidden')
+        && $('player-panel').classList.contains('hidden')
         && !$('btn-end-turn').disabled) {
       setEndTurnPending(true);
       endTurn();
@@ -393,6 +555,7 @@ function initGameActions() {
   });
 
   initZonePanels();
+  initPlayerPanel();
   initHandDrag();
   initFieldDropZones();
 }
@@ -410,20 +573,17 @@ function initSocketListeners() {
   on('socket:turn_changed', ({ currentTurn, turnNumber }) => {
     const gs = getState().gameState;
     if (!gs) return;
-    const prevTurn = gs.currentTurn;
     gs.currentTurn = currentTurn;
     gs.turnNumber  = turnNumber;
     setState({ gameState: gs });
 
-    const me    = getState().username;
-    const isMe  = currentTurn === me;
-    const label = isMe ? 'Turno tuo!' : `Turno di ${currentTurn}`;
-    showTurnBanner(label);
+    const me   = getState().username;
+    showTurnBanner(currentTurn === me ? 'Turno tuo!' : `Turno di ${currentTurn}`);
 
     renderPlayersBar(gs);
+    renderOpponentsArea(gs);
     updateTurnInfo(gs);
     updateEndTurnBtn(gs);
-    // Re-render hand so draggable state flips on turn change
     renderHand(gs.players[me]?.hand ?? []);
   });
 
@@ -432,17 +592,19 @@ function initSocketListeners() {
     if (!gs) return;
     const player = gs.players[playerId];
     if (!player) return;
-
     player.field[slotIndex] = card;
     if (playerId !== getState().username) {
-      // Decrement opponent hand count
       const idx = player.hand.findIndex(c => c.uid === cardUid);
       if (idx !== -1) player.hand.splice(idx, 1);
     }
     setState({ gameState: gs });
-
-    if (playerId === getState().username) renderField(player.field, 'player-field');
-    else                                  renderPlayersBar(gs); // hand count change
+    if (playerId === getState().username) {
+      renderField(player.field, 'player-field');
+    } else {
+      renderOpponentsArea(gs);
+      renderPlayersBar(gs);
+    }
+    refreshPanelIfOpen(playerId, gs);
   });
 
   on('socket:hand_updated', ({ hand }) => {
@@ -453,6 +615,7 @@ function initSocketListeners() {
     me.hand = hand;
     setState({ gameState: gs });
     renderHand(hand);
+    refreshPanelIfOpen(getState().username, gs);
   });
 
   on('socket:valid_slots', ({ cardUid, validSlots }) => {
@@ -475,9 +638,7 @@ function initSocketListeners() {
     import('./lobby.js').then(({ enterLobby }) => enterLobby());
   });
 
-  on('socket:player_left_match', () => {
-    // Status change is handled by player_status_changed; nothing extra needed here
-  });
+  on('socket:player_left_match', () => { /* handled by player_status_changed */ });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
