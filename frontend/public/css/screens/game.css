@@ -928,6 +928,121 @@
   50%       { box-shadow: 0 0 0 7px rgba(220,53,69,0.28); }
 }
 
+/* ─────────────────────────────────────────────
+   Damage / heal floaters
+   ───────────────────────────────────────────── */
+
+.damage-floater {
+  position:       fixed;
+  z-index:        9000;
+  transform:      translateX(-50%);
+  font-size:      18px;
+  font-weight:    800;
+  color:          var(--c-red);
+  text-shadow:    0 1px 4px rgba(0,0,0,0.25);
+  pointer-events: none;
+  animation:      floater-rise 1s ease-out forwards;
+}
+
+@keyframes floater-rise {
+  0%   { opacity: 1;   transform: translateX(-50%) translateY(0); }
+  60%  { opacity: 1;   transform: translateX(-50%) translateY(-28px); }
+  100% { opacity: 0;   transform: translateX(-50%) translateY(-44px); }
+}
+
+/* ─────────────────────────────────────────────
+   Game log panel
+   ───────────────────────────────────────────── */
+
+.game-log-panel {
+  position: fixed;
+  inset:    0;
+  z-index:  580;
+  display:  flex;
+  justify-content: flex-end;
+}
+.game-log-panel.hidden { display: none !important; }
+
+.game-log-overlay {
+  position:   absolute;
+  inset:      0;
+  background: rgba(0,0,0,0.25);
+}
+
+.game-log-box {
+  position:       relative;
+  z-index:        1;
+  width:          min(360px, 92vw);
+  height:         100%;
+  background:     var(--c-white);
+  display:        flex;
+  flex-direction: column;
+  box-shadow:     -3px 0 24px rgba(0,0,0,0.1);
+}
+
+.game-log-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         14px 18px;
+  border-bottom:   1px solid var(--c-border);
+  font-size:       14px;
+  font-weight:     700;
+  color:           var(--c-text);
+  flex-shrink:     0;
+}
+
+.game-log-close {
+  background:   none;
+  border:       none;
+  cursor:       pointer;
+  font-size:    17px;
+  color:        var(--c-sub);
+  padding:      2px 6px;
+  border-radius: var(--radius-sm);
+  line-height:  1;
+}
+.game-log-close:hover { color: var(--c-text); }
+
+.game-log-entries {
+  flex:       1;
+  overflow-y: auto;
+  padding:    10px 14px;
+  display:    flex;
+  flex-direction: column;
+  gap:        4px;
+}
+
+.game-log-empty {
+  font-size:  12px;
+  color:      var(--c-sub);
+  text-align: center;
+  padding:    24px 0;
+  margin:     0;
+}
+
+.game-log-line {
+  font-size:   11px;
+  line-height: 1.5;
+  padding:     3px 6px;
+  border-radius: 3px;
+  word-break:  break-word;
+}
+
+.gl-turn   { font-weight: 700; color: var(--c-text); background: var(--c-bg); }
+.gl-attack { color: var(--c-red);  }
+.gl-effect { color: var(--c-sub);  }
+.gl-system { color: var(--c-sub); font-style: italic; }
+
+/* Log toggle button in center bar */
+.game-log-toggle {
+  font-size:  11px;
+  padding:    4px 8px;
+  display:    flex;
+  align-items: center;
+  gap:        4px;
+}
+
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 600px) {
   .game-board { padding: 5px; gap: 4px; }

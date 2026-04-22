@@ -415,7 +415,7 @@
 
     <!-- Attack mode hint (floating, top-center) -->
     <div class="attack-mode-hint hidden" id="attack-mode-hint">
-      <span>Scegli un bersaglio da attaccare</span>
+      <span id="attack-hint-text">Scegli un bersaglio da attaccare</span>
       <button class="btn btn-sm btn-outline" id="btn-cancel-attack">Annulla</button>
     </div>
 
@@ -442,6 +442,12 @@
         </div>
         <span id="deck-count" class="deck-count">—</span>
       </div>
+      <!-- Log toggle -->
+      <button class="btn btn-sm btn-outline game-log-toggle" id="btn-toggle-log" title="Log eventi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Log
+      </button>
+
       <!-- Zone stacks -->
       <div class="zone-stacks">
         <button class="zone-stack" data-zone="discard" title="Scarti (le tue carte eliminate)">
@@ -529,6 +535,20 @@
     </div>
   </div>
 </section>
+
+<!-- ══════════════════════ GAME LOG PANEL ══════════════════════ -->
+<div id="game-log-panel" class="game-log-panel hidden" role="dialog" aria-modal="true">
+  <div class="game-log-overlay" id="game-log-overlay"></div>
+  <div class="game-log-box">
+    <div class="game-log-header">
+      <span>Log eventi</span>
+      <button class="game-log-close" id="game-log-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div id="game-log-entries" class="game-log-entries">
+      <p class="game-log-empty">Nessun evento ancora.</p>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════ PLAYER PANEL ══════════════════════ -->
 <div id="player-panel" class="player-panel hidden">

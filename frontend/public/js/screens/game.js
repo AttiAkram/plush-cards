@@ -82,10 +82,9 @@ function _removeGhost() { _ghostEl?.remove(); _ghostEl = null; }
 
 function enterAttackMode(card) {
   _attackModeCard = card;
+  $('attack-hint-text').textContent = `Attacca con ${card.name} — scegli un bersaglio`;
   $('attack-mode-hint').classList.remove('hidden');
-  // Re-render opponents area so enemy cards get the attackable class
   renderOpponentsArea(getState().gameState);
-  // Highlight selected attacker
   $('player-field').querySelectorAll('.field-slot').forEach(s => {
     const cardEl = s.querySelector('.card');
     if (cardEl) cardEl.classList.toggle('attacker-selected', cardEl.dataset.uid === card.uid);
@@ -98,6 +97,88 @@ function exitAttackMode() {
   $('player-field').querySelectorAll('.card.attacker-selected').forEach(c => c.classList.remove('attacker-selected'));
   renderOpponentsArea(getState().gameState);
 }
+
+// ── Damage floaters ───────────────────────────────────────────────────────────
+
+/**
+ * Show a floating damage/heal label above a card element for 1s.
+ * @param {HTMLElement} cardEl
+ * @param {string}      text   e.g. "-3" or "+2"
+ */
+function showDamageFloater(cardEl, text) {
+  if (!cardEl) return;
+  const rect     = cardEl.getBoundingClientRect();
+  const floater  = document.createElement('div');
+  floater.className   = 'damage-floater';
+  floater.textContent = text;
+  floater.style.left  = `${rect.left + rect.width / 2}px`;
+  floater.style.top   = `${rect.top  + rect.height * 0.3}px`;
+  document.body.appendChild(floater);
+  floater.addEventListener('animationend', () => floater.remove());
+}
+
+/** Find a rendered card element by uid (works across player field + opp areas). */
+function findCardEl(uid) {
+  return document.querySelector(`.card[data-uid="${uid}"]`);
+}
+
+/**
+ * Compare old and new game states; show floaters on cards whose HP changed.
+ */
+function showCombatFloaters(oldGs, newGs) {
+  if (!oldGs || !newGs) return;
+  for (const [uname, newP] of Object.entries(newGs.players)) {
+    const oldP = oldGs.players[uname];
+    if (!oldP) continue;
+    newP.field.forEach((newCard, i) => {
+      const oldCard = oldP.field[i];
+      if (!oldCard || !newCard || oldCard.uid !== newCard.uid) return;
+      const oldHp = oldCard.currentHp ?? oldCard.hp;
+      const newHp = newCard.currentHp ?? newCard.hp;
+      if (newHp < oldHp) showDamageFloater(findCardEl(oldCard.uid), `-${oldHp - newHp}`);
+      if (newHp > oldHp) showDamageFloater(findCardEl(oldCard.uid), `+${newHp - oldHp}`);
+    });
+  }
+}
+
+// ── Event log ─────────────────────────────────────────────────────────────────
+
+const LOG_MAX = 60;
+const _logEntries = [];   // { text: string, type: 'turn'|'attack'|'effect'|'system' }
+
+function addToLog(text, type = 'effect') {
+  _logEntries.push({ text, type });
+  if (_logEntries.length > LOG_MAX) _logEntries.shift();
+
+  // If panel is open, append the line directly (no full re-render)
+  if (!$('game-log-panel').classList.contains('hidden')) {
+    _appendLogEntry({ text, type });
+    const entries = $('game-log-entries');
+    entries.scrollTop = entries.scrollHeight;
+  }
+}
+
+function _appendLogEntry({ text, type }) {
+  const empty = $('game-log-entries').querySelector('.game-log-empty');
+  if (empty) empty.remove();
+  const line = el('div', `game-log-line gl-${type}`);
+  line.textContent = text;
+  $('game-log-entries').appendChild(line);
+}
+
+function renderLog() {
+  const container = $('game-log-entries');
+  container.innerHTML = '';
+  if (!_logEntries.length) {
+    container.innerHTML = '<p class="game-log-empty">Nessun evento ancora.</p>';
+    return;
+  }
+  _logEntries.forEach(e => _appendLogEntry(e));
+  container.scrollTop = container.scrollHeight;
+}
+
+function openLog()  { $('game-log-panel').classList.remove('hidden'); renderLog(); }
+function closeLog() { $('game-log-panel').classList.add('hidden'); }
 
 // ── Tap-select mode helpers ───────────────────────────────────────────────────
 
@@ -820,11 +901,17 @@ function initGameActions() {
   // Cancel attack mode button
   $('btn-cancel-attack').addEventListener('click', exitAttackMode);
 
+  // Log panel
+  $('btn-toggle-log').addEventListener('click', openLog);
+  $('game-log-close').addEventListener('click', closeLog);
+  $('game-log-overlay').addEventListener('click', closeLog);
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeCardModal();
       closeZonePanel();
       closePlayerPanel();
+      closeLog();
       exitTapSelectMode();
       exitAttackMode();
       return;
@@ -863,7 +950,8 @@ function initSocketListeners() {
     gs.turnNumber  = turnNumber;
     setState({ gameState: gs });
 
-    const me   = getState().username;
+    const me = getState().username;
+    addToLog(`── Turno ${turnNumber}: tocca a ${currentTurn} ──`, 'turn');
     showTurnBanner(currentTurn === me ? 'Turno tuo!' : `Turno di ${currentTurn}`);
 
     renderPlayersBar(gs);
@@ -906,7 +994,9 @@ function initSocketListeners() {
 
   on('socket:effects_applied', ({ results, gameState: newGs }) => {
     if (!newGs) return;
-    const me = getState().username;
+    const me    = getState().username;
+    const oldGs = getState().gameState;
+    showCombatFloaters(oldGs, newGs);
     setState({ gameState: newGs });
     renderPlayersBar(newGs);
     renderOpponentsArea(newGs);
@@ -914,12 +1004,17 @@ function initSocketListeners() {
     updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
     for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
-    for (const msg of results) showToast(msg);
+    for (const msg of results) {
+      addToLog(msg, 'effect');
+      showToast(msg);
+    }
   });
 
   on('socket:attack_result', ({ results, gameState: newGs }) => {
     if (!newGs) return;
-    const me = getState().username;
+    const me    = getState().username;
+    const oldGs = getState().gameState;
+    showCombatFloaters(oldGs, newGs);
     setState({ gameState: newGs });
     renderPlayersBar(newGs);
     renderOpponentsArea(newGs);
@@ -927,11 +1022,15 @@ function initSocketListeners() {
     updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
     for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
-    for (const msg of results) showToast(msg);
+    for (const msg of results) {
+      addToLog(msg, 'attack');
+      showToast(msg);
+    }
   });
 
-  on('socket:card_discarded', ({ gameState: newGs }) => {
+  on('socket:card_discarded', ({ username: who, gameState: newGs }) => {
     if (!newGs) return;
+    addToLog(`${who} scarta una carta`, 'system');
     setState({ gameState: newGs });
     updateZoneCounts(newGs);
     refreshPanelIfOpen(getState().username, newGs);
@@ -952,6 +1051,10 @@ function initSocketListeners() {
     player.status = status;
     setState({ gameState: gs });
     renderPlayersBar(gs);
+  });
+
+  on('socket:error', msg => {
+    showToast(typeof msg === 'string' ? msg : 'Errore di gioco', true);
   });
 
   on('socket:left_match', () => {
