@@ -91,7 +91,7 @@ router.get('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
 
 // ── POST /api/admin/cards — create a new card ─────────────────────────────────
 router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
-  const { id, name, damage, hp, rarity, type = 'personaggio', description = '', effects = [] } = req.body;
+  const { id, name, damage, hp, rarity, type = 'personaggio', description = '', effects = [], tags = [], role = 'neutro' } = req.body;
 
   if (!id || !name)
     return res.status(400).json({ error: 'id e name sono obbligatori' });
@@ -107,13 +107,15 @@ router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => 
   const card = {
     id,
     name,
-    damage: Number(damage) || 0,
-    hp:     Number(hp) || 1,
+    damage:      Number(damage) || 0,
+    hp:          Number(hp) || 1,
     rarity,
     type,
-    active: false,   // new cards start as drafts
+    active:      false,
     description,
-    effects: Array.isArray(effects) ? effects : [],
+    tags:        Array.isArray(tags) ? tags : [],
+    role:        role || 'neutro',
+    effects:     Array.isArray(effects) ? effects : [],
   };
 
   cards.set(id, card);
@@ -125,8 +127,7 @@ router.put('/cards/:id', authenticate, requireRole('root', 'admin'), (req, res) 
   const card = cards.get(req.params.id);
   if (!card) return res.status(404).json({ error: 'Carta non trovata' });
 
-  const { name, damage, hp, rarity, type, description, effects, active } = req.body;
-
+  const { name, damage, hp, rarity, type, description, effects, active, tags, role } = req.body;
   if (name        !== undefined) card.name        = name;
   if (damage      !== undefined) card.damage      = Number(damage) || 0;
   if (hp          !== undefined) card.hp          = Number(hp) || 1;
@@ -135,6 +136,8 @@ router.put('/cards/:id', authenticate, requireRole('root', 'admin'), (req, res) 
   if (description !== undefined) card.description = description;
   if (effects     !== undefined) card.effects     = Array.isArray(effects) ? effects : [];
   if (active      !== undefined) card.active      = Boolean(active);
+  if (tags        !== undefined) card.tags        = Array.isArray(tags) ? tags : [];
+  if (role        !== undefined) card.role        = role || 'neutro';
 
   res.json(card);
 });

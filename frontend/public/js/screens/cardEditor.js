@@ -1,23 +1,26 @@
 /**
- * Card editor slide-in panel — create and edit cards with inline effect rows.
+ * Card editor slide-in panel.
+ * Features: create/edit, live effect preview, duplicate effect row,
+ * tags/role fields, semantic validation.
  */
 
 import { $, el, escHtml }  from '../utils/dom.js';
 import * as api             from '../api/client.js';
 import { showToast }        from '../components/toast.js';
+import { effectToText }     from '../utils/effectText.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TRIGGERS = [
+export const TRIGGERS = [
   { value: 'QUANDO_GIOCATA',      label: 'Quando giocata' },
   { value: 'ALL_INIZIO_TURNO',    label: 'Inizio del tuo turno' },
   { value: 'ALL_FINE_TURNO',      label: 'Fine del tuo turno' },
-  { value: 'QUANDO_DICHIARA',     label: 'Quando dichiara attacco' },
+  { value: 'QUANDO_DICHIARA',     label: 'Quando attacca' },
   { value: 'PASSIVO_SE_IN_CAMPO', label: 'Passivo (se in campo)' },
   { value: 'ON_MORTE',            label: 'Alla morte' },
 ];
 
-const ACTIONS = [
+export const ACTIONS = [
   { value: 'PESCA_CARTE',             label: 'Pesca carte',              params: ['amount'] },
   { value: 'DANNO_A_CARTA',           label: 'Infliggi danno a carta',   params: ['amount'] },
   { value: 'DANNO_A_ARTEFATTO',       label: 'Infliggi danno artefatto', params: ['amount'] },
@@ -28,14 +31,7 @@ const ACTIONS = [
   { value: 'ABILITA_TRIGGER_GLOBALI', label: 'Abilita trigger globali',  params: [] },
 ];
 
-const ZONE_DESTINATIONS = [
-  { value: 'mano',     label: 'Mano' },
-  { value: 'scarti',   label: 'Scarti' },
-  { value: 'vuoto',    label: 'Vuoto' },
-  { value: 'assoluto', label: 'Assoluto' },
-];
-
-const TARGETS = [
+export const TARGETS = [
   { value: 'SE_STESSO',            label: 'Sé stesso' },
   { value: 'UN_TUO_PERSONAGGIO',   label: 'Un tuo personaggio (rand.)' },
   { value: 'UN_NEMICO',            label: 'Un nemico (rand.)' },
@@ -45,10 +41,17 @@ const TARGETS = [
   { value: 'ARTEFATTO_NEMICO',     label: 'Artefatto nemico' },
 ];
 
+export const ZONE_DESTINATIONS = [
+  { value: 'mano',     label: 'Mano' },
+  { value: 'scarti',   label: 'Scarti' },
+  { value: 'vuoto',    label: 'Vuoto' },
+  { value: 'assoluto', label: 'Assoluto' },
+];
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let _editId      = null;  // null = new card, string = existing id
-let _onSaved     = null;  // callback invoked after successful save
+let _editId  = null;
+let _onSaved = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,7 +67,31 @@ function makeSelect(options, selectedValue, cls) {
   return sel;
 }
 
+function readEffectFromRow(row) {
+  const action    = row.querySelector('.ce-sel-action')?.value;
+  const actionDef = ACTIONS.find(a => a.value === action);
+  const ps        = actionDef?.params ?? [];
+  const params    = {};
+  if (ps.includes('amount'))       params.amount       = Number(row.querySelector('.ce-amount-input')?.value ?? 0);
+  if (ps.includes('destinazione')) params.destinazione = row.querySelector('.ce-sel-dest')?.value ?? 'mano';
+  return {
+    trigger: row.querySelector('.ce-sel-trigger')?.value,
+    action,
+    target:  row.querySelector('.ce-sel-target')?.value,
+    params,
+  };
+}
+
 // ── Effect rows ───────────────────────────────────────────────────────────────
+
+function updatePreview(row) {
+  const effect  = readEffectFromRow(row);
+  const preview = row.querySelector('.ce-effect-preview');
+  if (!preview) return;
+  const text = effectToText(effect);
+  preview.textContent = text ?? '—';
+  preview.classList.toggle('ce-preview-empty', !text);
+}
 
 function buildEffectRow(effect = {}) {
   const row = el('div', 'ce-effect-row');
@@ -85,7 +112,7 @@ function buildEffectRow(effect = {}) {
   amountWrap.appendChild(amountLabel);
   amountWrap.appendChild(amountInput);
 
-  // Destinazione param (for SPOSTA_CARTA_DI_ZONA)
+  // Destinazione param
   const destWrap  = el('div', 'ce-amount-wrap');
   const destLabel = el('label', 'ce-amount-label');
   destLabel.textContent = 'Destinazione';
@@ -93,46 +120,79 @@ function buildEffectRow(effect = {}) {
   destWrap.appendChild(destLabel);
   destWrap.appendChild(destSel);
 
+  // Action buttons
   const removeBtn = el('button', 'ce-effect-remove');
   removeBtn.type        = 'button';
   removeBtn.textContent = '✕';
   removeBtn.title       = 'Rimuovi effetto';
   removeBtn.addEventListener('click', () => row.remove());
 
-  function updateParamVisibility() {
+  const dupBtn = el('button', 'ce-effect-dup');
+  dupBtn.type        = 'button';
+  dupBtn.textContent = '⧉';
+  dupBtn.title       = 'Duplica effetto';
+  dupBtn.addEventListener('click', () => {
+    const copy = buildEffectRow(readEffectFromRow(row));
+    row.parentNode.insertBefore(copy, row.nextSibling);
+  });
+
+  // Live preview
+  const preview = el('div', 'ce-effect-preview');
+
+  function refresh() {
     const actionDef = ACTIONS.find(a => a.value === actionSel.value);
     const ps = actionDef?.params ?? [];
     amountWrap.classList.toggle('hidden', !ps.includes('amount'));
     destWrap.classList.toggle('hidden',   !ps.includes('destinazione'));
+    updatePreview(row);
   }
 
-  actionSel.addEventListener('change', updateParamVisibility);
-  updateParamVisibility();
+  // Validate amount on blur
+  amountInput.addEventListener('blur', () => {
+    const action = actionSel.value;
+    const v = Number(amountInput.value);
+    if (['PESCA_CARTE', 'DANNO_A_CARTA', 'DANNO_A_ARTEFATTO'].includes(action) && v < 1) {
+      amountInput.value = 1;
+    }
+    updatePreview(row);
+  });
+
+  [triggerSel, actionSel, targetSel, destSel].forEach(s => s.addEventListener('change', refresh));
+  amountInput.addEventListener('input', () => updatePreview(row));
+
+  refresh();
 
   row.appendChild(triggerSel);
   row.appendChild(actionSel);
   row.appendChild(targetSel);
   row.appendChild(amountWrap);
   row.appendChild(destWrap);
+  row.appendChild(dupBtn);
   row.appendChild(removeBtn);
+  row.appendChild(preview);
   return row;
 }
 
 function collectEffects() {
-  const rows = $('ce-effects-list').querySelectorAll('.ce-effect-row');
-  return Array.from(rows).map(row => {
-    const trigger   = row.querySelector('.ce-sel-trigger')?.value;
-    const action    = row.querySelector('.ce-sel-action')?.value;
-    const target    = row.querySelector('.ce-sel-target')?.value;
-    const amountEl  = row.querySelector('.ce-amount-input');
-    const destEl    = row.querySelector('.ce-sel-dest');
-    const actionDef = ACTIONS.find(a => a.value === action);
-    const ps        = actionDef?.params ?? [];
-    const params    = {};
-    if (ps.includes('amount'))       params.amount       = Number(amountEl?.value ?? 0);
-    if (ps.includes('destinazione')) params.destinazione = destEl?.value ?? 'mano';
-    return { trigger, action, target, params };
-  });
+  return Array.from(
+    $('ce-effects-list').querySelectorAll('.ce-effect-row'),
+    row => readEffectFromRow(row),
+  );
+}
+
+// ── Validate ──────────────────────────────────────────────────────────────────
+
+function validateEffects(effects) {
+  for (const eff of effects) {
+    if (!eff.trigger || !eff.action || !eff.target) return 'Un effetto ha campi mancanti.';
+    if (['PESCA_CARTE', 'DANNO_A_CARTA', 'DANNO_A_ARTEFATTO'].includes(eff.action)) {
+      if (!eff.params.amount || eff.params.amount < 1)
+        return `${eff.action}: la quantità deve essere ≥ 1.`;
+    }
+    if (eff.action === 'SPOSTA_CARTA_DI_ZONA' && !eff.params.destinazione)
+      return 'SPOSTA_CARTA_DI_ZONA: seleziona una destinazione.';
+  }
+  return null;
 }
 
 // ── Open / close ──────────────────────────────────────────────────────────────
@@ -146,6 +206,8 @@ function clearForm() {
   $('ce-type').value        = 'personaggio';
   $('ce-active').checked    = false;
   $('ce-description').value = '';
+  $('ce-tags').value        = '';
+  $('ce-role').value        = 'neutro';
   $('ce-effects-list').innerHTML = '';
   $('ce-error').textContent = '';
 }
@@ -159,7 +221,7 @@ export function openCardEditor(card, onSaved) {
 
   if (card) {
     $('ce-id').value          = card.id;
-    $('ce-id').disabled       = true;   // id is immutable after creation
+    $('ce-id').disabled       = true;
     $('ce-name').value        = card.name;
     $('ce-damage').value      = card.damage ?? 0;
     $('ce-hp').value          = card.hp ?? 1;
@@ -167,7 +229,8 @@ export function openCardEditor(card, onSaved) {
     $('ce-type').value        = card.type ?? 'personaggio';
     $('ce-active').checked    = card.active ?? false;
     $('ce-description').value = card.description ?? '';
-
+    $('ce-tags').value        = Array.isArray(card.tags) ? card.tags.join(', ') : (card.tags ?? '');
+    $('ce-role').value        = card.role ?? 'neutro';
     for (const eff of card.effects ?? []) {
       $('ce-effects-list').appendChild(buildEffectRow(eff));
     }
@@ -177,6 +240,14 @@ export function openCardEditor(card, onSaved) {
 
   $('card-editor-panel').classList.remove('hidden');
   $('ce-name').focus();
+}
+
+/** Open the editor pre-filled as a copy (no id, name marked as copy). */
+export function duplicateCardEditor(card, onSaved) {
+  openCardEditor({ ...card, id: null, name: `${card.name} (copia)`, active: false }, onSaved);
+  $('ce-id').value    = '';
+  $('ce-id').disabled = false;
+  $('card-editor-title').textContent = 'Duplica Carta';
 }
 
 export function closeCardEditor() {
@@ -197,10 +268,16 @@ async function saveCard() {
   const type        = $('ce-type').value;
   const active      = $('ce-active').checked;
   const description = $('ce-description').value.trim();
+  const tagsRaw     = $('ce-tags').value.trim();
+  const tags        = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const role        = $('ce-role').value;
   const effects     = collectEffects();
 
   if (!name) { errorEl.textContent = 'Il nome è obbligatorio'; return; }
   if (!_editId && !id) { errorEl.textContent = "L'ID è obbligatorio"; return; }
+
+  const effErr = validateEffects(effects);
+  if (effErr) { errorEl.textContent = effErr; return; }
 
   const btn = $('btn-ce-save');
   btn.disabled = true;
@@ -208,13 +285,11 @@ async function saveCard() {
   try {
     let res;
     if (_editId) {
-      res = await api.put(`/api/admin/cards/${_editId}`, { name, damage, hp, rarity, type, active, description, effects });
+      res = await api.put(`/api/admin/cards/${_editId}`, { name, damage, hp, rarity, type, active, description, tags, role, effects });
     } else {
-      res = await api.post('/api/admin/cards', { id, name, damage, hp, rarity, type, description, effects });
+      res = await api.post('/api/admin/cards', { id, name, damage, hp, rarity, type, description, tags, role, effects });
     }
-
     if (res.error) { errorEl.textContent = res.error; return; }
-
     showToast(_editId ? 'Carta aggiornata' : 'Carta creata');
     closeCardEditor();
     _onSaved?.();

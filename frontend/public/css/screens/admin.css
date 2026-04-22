@@ -225,6 +225,37 @@
 .admin-coming-soon p   { font-size: 14px; font-weight: 600; color: var(--c-text); margin: 0; }
 .admin-coming-soon span { font-size: 12px; }
 
+/* Card filter bar */
+.admin-card-filters {
+  display:   flex;
+  gap:       8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+}
+
+.admin-filter-input {
+  flex:          1 1 160px;
+  padding:       7px 10px;
+  border:        1.5px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background:    var(--c-white);
+  color:         var(--c-text);
+  font-size:     13px;
+}
+.admin-filter-input:focus { outline: none; border-color: var(--c-text); }
+
+.admin-filter-select {
+  flex:          0 1 140px;
+  padding:       7px 10px;
+  border:        1.5px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background:    var(--c-white);
+  color:         var(--c-text);
+  font-size:     13px;
+  cursor:        pointer;
+}
+.admin-filter-select:focus { outline: none; border-color: var(--c-text); }
+
 /* Card list */
 .admin-card-list {
   display:        flex;
@@ -298,6 +329,24 @@
   align-items: center;
   gap:         6px;
   flex-shrink: 0;
+}
+
+/* Tag pills under card name */
+.admin-card-tags {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       4px;
+  margin-top: 3px;
+}
+
+.admin-card-tag {
+  font-size:   10px;
+  font-weight: 500;
+  padding:     1px 6px;
+  border-radius: var(--radius-pill);
+  background:  var(--c-bg);
+  color:       var(--c-sub);
+  border:      1px solid var(--c-border);
 }
 
 /* ─────────────────────────────────────────────
@@ -418,7 +467,7 @@
 
 .ce-effect-row {
   display:       grid;
-  grid-template-columns: 1fr 1fr 1fr auto auto;
+  grid-template-columns: 1fr 1fr 1fr auto auto auto auto;
   gap:           6px;
   align-items:   center;
   padding:       10px 12px;
@@ -448,16 +497,30 @@
 }
 .ce-amount-input:focus { outline: none; border-color: var(--c-text); }
 
-.ce-effect-remove {
-  background:   none;
-  border:       none;
-  cursor:       pointer;
-  color:        var(--c-sub);
-  font-size:    14px;
-  padding:      2px 6px;
+.ce-effect-remove,
+.ce-effect-dup {
+  background:    none;
+  border:        none;
+  cursor:        pointer;
+  color:         var(--c-sub);
+  font-size:     14px;
+  padding:       2px 6px;
   border-radius: var(--radius-sm);
+  flex-shrink:   0;
 }
 .ce-effect-remove:hover { color: var(--c-red); }
+.ce-effect-dup:hover    { color: var(--c-text); }
+
+/* Live preview text under the effect controls */
+.ce-effect-preview {
+  grid-column: 1 / -1;
+  font-size:   11px;
+  color:       var(--c-text);
+  font-style:  italic;
+  padding:     4px 2px 0;
+  line-height: 1.4;
+}
+.ce-effect-preview.ce-preview-empty { color: var(--c-sub); }
 
 /* Mobile: stack effect row */
 @media (max-width: 480px) {
@@ -465,6 +528,7 @@
     grid-template-columns: 1fr 1fr;
     grid-template-rows:    auto auto auto;
   }
+  .ce-effect-dup    { grid-column: 1; justify-self: start; }
   .ce-effect-remove { grid-column: 2; justify-self: end; }
 }
 

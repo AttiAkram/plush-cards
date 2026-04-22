@@ -311,6 +311,27 @@
           Nuova carta
         </button>
       </div>
+      <div class="admin-card-filters">
+        <input  id="card-filter-search"  type="text"    placeholder="Cerca per nome…" class="admin-filter-input">
+        <select id="card-filter-type"    class="admin-filter-select">
+          <option value="">Tutti i tipi</option>
+          <option value="personaggio">Personaggio</option>
+          <option value="artefatto">Artefatto</option>
+        </select>
+        <select id="card-filter-rarity"  class="admin-filter-select">
+          <option value="">Tutte le rarità</option>
+          <option value="comune">Comune</option>
+          <option value="raro">Raro</option>
+          <option value="epico">Epico</option>
+          <option value="mitico">Mitico</option>
+          <option value="leggendario">Leggendario</option>
+        </select>
+        <select id="card-filter-active"  class="admin-filter-select">
+          <option value="">Tutte</option>
+          <option value="active">Attive</option>
+          <option value="draft">Bozze</option>
+        </select>
+      </div>
       <div id="admin-card-list" class="admin-card-list">
         <div class="admin-loading">Caricamento…</div>
       </div>
@@ -657,6 +678,22 @@
       <div class="field-group">
         <label for="ce-description">Descrizione</label>
         <textarea id="ce-description" rows="2" placeholder="Testo descrittivo della carta…" maxlength="280"></textarea>
+      </div>
+      <div class="ce-row">
+        <div class="field-group ce-field-half">
+          <label for="ce-tags">Tag / Famiglia</label>
+          <input id="ce-tags" type="text" placeholder="orso, fuoco, curatore…" maxlength="120">
+        </div>
+        <div class="field-group ce-field-half">
+          <label for="ce-role">Ruolo (design)</label>
+          <select id="ce-role" class="select-input">
+            <option value="neutro">Neutro</option>
+            <option value="aggro">Aggro</option>
+            <option value="difesa">Difesa</option>
+            <option value="valore">Valore (draw/resource)</option>
+            <option value="controllo">Controllo</option>
+          </select>
+        </div>
       </div>
 
       <!-- Effects -->

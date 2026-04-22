@@ -2,12 +2,12 @@
  * Admin panel screen — user management, card catalog (placeholder).
  */
 
-import { $, el, escHtml }              from '../utils/dom.js';
-import * as api                        from '../api/client.js';
-import { getState }                    from '../state/store.js';
-import { showScreen }                  from '../router/index.js';
-import { showToast }                   from '../components/toast.js';
-import { openCardEditor, initCardEditor } from './cardEditor.js';
+import { $, el, escHtml }                              from '../utils/dom.js';
+import * as api                                        from '../api/client.js';
+import { getState }                                    from '../state/store.js';
+import { showScreen }                                  from '../router/index.js';
+import { showToast }                                   from '../components/toast.js';
+import { openCardEditor, duplicateCardEditor, initCardEditor } from './cardEditor.js';
 
 const ROLE_LABELS = { root: 'AdminRoot', admin: 'Admin', player: 'Player' };
 
@@ -151,12 +151,33 @@ const RARITY_LABELS_CARD = {
   comune: 'C', raro: 'R', epico: 'E', mitico: 'M', leggendario: 'L',
 };
 
+let _allCards = [];
+
 async function loadCards() {
   const list = $('admin-card-list');
   list.innerHTML = '<div class="admin-loading">Caricamento…</div>';
   const cards = await api.get('/api/admin/cards');
   if (cards.error) { list.innerHTML = `<div class="admin-loading">${escHtml(cards.error)}</div>`; return; }
-  renderCardList(cards);
+  _allCards = cards;
+  applyCardFilters();
+}
+
+function applyCardFilters() {
+  const search  = ($('card-filter-search')?.value  ?? '').toLowerCase();
+  const type    =  $('card-filter-type')?.value    ?? '';
+  const rarity  =  $('card-filter-rarity')?.value  ?? '';
+  const active  =  $('card-filter-active')?.value  ?? '';
+
+  const filtered = _allCards.filter(c => {
+    if (search && !c.name.toLowerCase().includes(search)) return false;
+    if (type   && c.type    !== type)                      return false;
+    if (rarity && c.rarity  !== rarity)                    return false;
+    if (active === 'active' && !c.active)                  return false;
+    if (active === 'draft'  &&  c.active)                  return false;
+    return true;
+  });
+
+  renderCardList(filtered);
 }
 
 function renderCardList(cards) {
@@ -169,12 +190,17 @@ function renderCardList(cards) {
   }
 
   for (const card of cards) {
+    const tagsHtml = (card.tags ?? []).length
+      ? card.tags.map(t => `<span class="admin-card-tag">${escHtml(t)}</span>`).join('')
+      : '';
+
     const row = el('div', 'admin-card-row');
     row.innerHTML = `
       <div class="admin-card-rarity-badge rarity-${card.rarity}">${RARITY_LABELS_CARD[card.rarity] ?? '?'}</div>
       <div class="admin-card-info">
         <span class="admin-card-name">${escHtml(card.name)}</span>
-        <span class="admin-card-meta">${escHtml(card.type)} · ATK ${card.damage} · HP ${card.hp} · ${card.effects?.length ?? 0} effett${card.effects?.length === 1 ? 'o' : 'i'}</span>
+        <span class="admin-card-meta">${escHtml(card.type)} · ATK ${card.damage} · HP ${card.hp} · ${card.effects?.length ?? 0} effett${card.effects?.length === 1 ? 'o' : 'i'}${card.role && card.role !== 'neutro' ? ` · <em>${escHtml(card.role)}</em>` : ''}</span>
+        ${tagsHtml ? `<div class="admin-card-tags">${tagsHtml}</div>` : ''}
       </div>
       <div class="admin-card-status ${card.active ? 'status-active' : 'status-disabled'}">${card.active ? 'Attiva' : 'Bozza'}</div>
       <div class="admin-card-actions"></div>`;
@@ -195,15 +221,25 @@ function renderCardList(cards) {
       showToast(card.active ? 'Carta attivata' : 'Carta disattivata');
     });
 
-    // Edit button
     const editBtn = el('button', 'btn btn-sm btn-outline');
     editBtn.textContent = 'Modifica';
     editBtn.addEventListener('click', () => openCardEditor(card, loadCards));
 
+    const dupBtn = el('button', 'btn btn-sm btn-outline');
+    dupBtn.textContent = 'Duplica';
+    dupBtn.title = 'Crea una copia di questa carta';
+    dupBtn.addEventListener('click', () => duplicateCardEditor(card, loadCards));
+
     actions.appendChild(toggleBtn);
     actions.appendChild(editBtn);
+    actions.appendChild(dupBtn);
     list.appendChild(row);
   }
+}
+
+function initCardFilters() {
+  [$('card-filter-search'), $('card-filter-type'), $('card-filter-rarity'), $('card-filter-active')]
+    .forEach(el => el?.addEventListener('input', applyCardFilters));
 }
 
 // ── Tab switching (extended to load data) ─────────────────────────────────────
@@ -238,6 +274,7 @@ export function initAdminScreen() {
   initTabs();
   initNewUserModal();
   initCardEditor();
+  initCardFilters();
 
   $('btn-new-card').addEventListener('click', () => openCardEditor(null, loadCards));
 

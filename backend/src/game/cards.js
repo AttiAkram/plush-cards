@@ -33,13 +33,14 @@ const CARD_DEFINITIONS = [
   {
     id: 'orso', name: 'Plush Orso', damage: 4, hp: 7,
     rarity: 'comune', type: 'personaggio', active: true,
-    effects: [],
+    tags: ['orso', 'tank'], role: 'difesa', effects: [],
     description: 'Un orsacchiotto con artigli affilati. Protegge il suo territorio con fierezza.',
   },
 
   {
     id: 'panda', name: 'Plush Panda', damage: 2, hp: 10,
     rarity: 'comune', type: 'personaggio', active: true,
+    tags: ['panda', 'draw'], role: 'valore',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'PESCA_CARTE', target: 'SE_STESSO', params: { amount: 2 } },
     ],
@@ -49,6 +50,7 @@ const CARD_DEFINITIONS = [
   {
     id: 'gatto', name: 'Plush Gatto', damage: 4, hp: 5,
     rarity: 'comune', type: 'personaggio', active: true,
+    tags: ['gatto', 'flash'], role: 'aggro',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'DANNO_A_CARTA', target: 'UN_NEMICO', params: { amount: 1 } },
     ],
@@ -58,6 +60,7 @@ const CARD_DEFINITIONS = [
   {
     id: 'coniglio', name: 'Plush Coniglio', damage: 4, hp: 6,
     rarity: 'raro', type: 'personaggio', active: true,
+    tags: ['coniglio', 'draw'], role: 'valore',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'PESCA_CARTE', target: 'SE_STESSO', params: { amount: 1 } },
     ],
@@ -67,6 +70,7 @@ const CARD_DEFINITIONS = [
   {
     id: 'volpe', name: 'Plush Volpe', damage: 5, hp: 6,
     rarity: 'raro', type: 'personaggio', active: true,
+    tags: ['volpe', 'splash'], role: 'controllo',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'DANNO_A_CARTA', target: 'TUTTI_I_NEMICI', params: { amount: 1 } },
     ],
@@ -76,6 +80,7 @@ const CARD_DEFINITIONS = [
   {
     id: 'gufo', name: 'Plush Gufo', damage: 3, hp: 6,
     rarity: 'raro', type: 'personaggio', active: true,
+    tags: ['gufo', 'draw', 'valore'], role: 'valore',
     effects: [
       { trigger: 'ALL_FINE_TURNO', action: 'PESCA_CARTE', target: 'SE_STESSO', params: { amount: 1 } },
     ],
@@ -85,15 +90,17 @@ const CARD_DEFINITIONS = [
   {
     id: 'lupo', name: 'Plush Lupo', damage: 6, hp: 9,
     rarity: 'epico', type: 'personaggio', active: true,
+    tags: ['lupo', 'buff', 'leader'], role: 'aggro',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'MODIFICA_ATTACCO', target: 'TUTTI_I_TUOI', params: { amount: 2 } },
     ],
-    description: 'Il leader del branco. Quando arriva potenzia l\'attacco di tutti i tuoi personaggi di +2.',
+    description: "Il leader del branco. Quando arriva potenzia l'attacco di tutti i tuoi personaggi di +2.",
   },
 
   {
     id: 'drago', name: 'Plush Drago', damage: 7, hp: 12,
     rarity: 'epico', type: 'personaggio', active: true,
+    tags: ['drago', 'fuoco', 'removal'], role: 'controllo',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'DANNO_A_CARTA', target: 'UN_NEMICO', params: { amount: 3 } },
     ],
@@ -103,15 +110,17 @@ const CARD_DEFINITIONS = [
   {
     id: 'unicorno', name: 'Plush Unicorno', damage: 6, hp: 15,
     rarity: 'mitico', type: 'personaggio', active: true,
+    tags: ['unicorno', 'cura', 'supporto'], role: 'difesa',
     effects: [
       { trigger: 'ALL_INIZIO_TURNO', action: 'MODIFICA_VITA', target: 'UN_TUO_PERSONAGGIO', params: { amount: 2 } },
     ],
-    description: 'Guaritore del campo. All\'inizio di ogni tuo turno cura +2 HP a uno dei tuoi personaggi.',
+    description: "Guaritore del campo. All'inizio di ogni tuo turno cura +2 HP a uno dei tuoi personaggi.",
   },
 
   {
     id: 'fenice', name: 'Plush Fenice', damage: 10, hp: 18,
     rarity: 'leggendario', type: 'personaggio', active: true,
+    tags: ['fenice', 'resurrezione', 'legandario'], role: 'valore',
     effects: [
       { trigger: 'ON_MORTE', action: 'SPOSTA_CARTA_DI_ZONA', target: 'SE_STESSO', params: { destinazione: 'mano' } },
     ],
@@ -123,6 +132,7 @@ const CARD_DEFINITIONS = [
   {
     id: 'torta_bambu', name: 'Torta di Bambù', damage: 0, hp: 12,
     rarity: 'comune', type: 'artefatto', active: true,
+    tags: ['cibo', 'draw'], role: 'valore',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'PESCA_CARTE', target: 'SE_STESSO', params: { amount: 1 } },
     ],
@@ -132,15 +142,17 @@ const CARD_DEFINITIONS = [
   {
     id: 'scudo_piumato', name: 'Scudo Piumato', damage: 0, hp: 16,
     rarity: 'raro', type: 'artefatto', active: true,
+    tags: ['scudo', 'regen'], role: 'difesa',
     effects: [
       { trigger: 'ALL_INIZIO_TURNO', action: 'MODIFICA_VITA', target: 'SE_STESSO', params: { amount: 1 } },
     ],
-    description: 'Uno scudo di piume magiche. All\'inizio di ogni tuo turno si rigenera di 1 HP.',
+    description: "Uno scudo di piume magiche. All'inizio di ogni tuo turno si rigenera di 1 HP.",
   },
 
   {
     id: 'cristallo_antico', name: 'Cristallo Antico', damage: 2, hp: 8,
     rarity: 'epico', type: 'artefatto', active: true,
+    tags: ['cristallo', 'magia', 'draw', 'removal'], role: 'valore',
     effects: [
       { trigger: 'QUANDO_GIOCATA', action: 'PESCA_CARTE',   target: 'SE_STESSO', params: { amount: 2 } },
       { trigger: 'QUANDO_GIOCATA', action: 'DANNO_A_CARTA', target: 'UN_NEMICO', params: { amount: 2 } },
