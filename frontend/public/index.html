@@ -413,6 +413,12 @@
     <!-- End Turn (floating, bottom-right) -->
     <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
 
+    <!-- Attack mode hint (floating, top-center) -->
+    <div class="attack-mode-hint hidden" id="attack-mode-hint">
+      <span>Scegli un bersaglio da attaccare</span>
+      <button class="btn btn-sm btn-outline" id="btn-cancel-attack">Annulla</button>
+    </div>
+
     <!-- ── Row 1: Players status bar ─────────────────────────── -->
     <div class="players-bar" id="players-bar">
       <button class="btn btn-outline btn-sm btn-leave-match" id="btn-leave-match">← Esci</button>
@@ -613,7 +619,11 @@
     <div class="card-modal-rarity" id="card-modal-rarity"></div>
     <div class="card-modal-stats" id="card-modal-stats"></div>
     <div class="card-modal-desc" id="card-modal-desc"></div>
-    <button class="btn btn-primary card-modal-play hidden" id="card-modal-play">Gioca</button>
+    <div class="card-modal-actions">
+      <button class="btn btn-primary card-modal-play hidden" id="card-modal-play">Gioca</button>
+      <button class="btn btn-danger card-modal-attack hidden" id="card-modal-attack">Attacca</button>
+      <button class="btn btn-outline card-modal-discard hidden" id="card-modal-discard">Scarta</button>
+    </div>
   </div>
 </div>
 

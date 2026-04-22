@@ -231,19 +231,32 @@ function executeEffects(gs, actorUsername, trigger, sourceCard) {
 
   results.push(..._inner(gs, trigger, candidates, dirtyPlayers, pendingDeaths));
 
-  // ── Process deaths ──────────────────────────────────────────────────────────
-  // Fire ON_MORTE for each killed card while it's still conceptually "on field",
-  // then resolve its fate (SPOSTA_CARTA_DI_ZONA may have moved it already).
+  results.push(...processPendingDeaths(gs, pendingDeaths, dirtyPlayers));
+
+  return { results, dirtyPlayers };
+}
+
+// ── Shared death resolver ──────────────────────────────────────────────────────
+
+/**
+ * Process a list of pending deaths: fire ON_MORTE, then remove from field
+ * (unless SPOSTA_CARTA_DI_ZONA already moved the card).
+ * Mutates `gs` and `dirtyPlayers`. Returns log lines.
+ *
+ * @param {object}   gs
+ * @param {Array}    pendingDeaths  — [{ card, username, slotIndex }]
+ * @param {Set}      dirtyPlayers
+ * @returns {string[]}
+ */
+function processPendingDeaths(gs, pendingDeaths, dirtyPlayers) {
+  const results = [];
   for (const { card, username, slotIndex } of pendingDeaths) {
     const pState = gs.players[username];
     if (!pState) continue;
 
-    // Fire ON_MORTE effects on the dying card
     const deathPending = [];
-    const deathResults = _inner(gs, 'ON_MORTE', [{ card, owner: username }], dirtyPlayers, deathPending);
-    results.push(...deathResults);
+    results.push(..._inner(gs, 'ON_MORTE', [{ card, owner: username }], dirtyPlayers, deathPending));
 
-    // If card is still in that field slot (ON_MORTE didn't move it), discard it
     if (pState.field[slotIndex] === card) {
       pState.field[slotIndex] = null;
       const clean = { ...card };
@@ -251,7 +264,6 @@ function executeEffects(gs, actorUsername, trigger, sourceCard) {
       pState.discard.push(clean);
     }
 
-    // Handle any secondary deaths from ON_MORTE chain (max 1 level for now)
     for (const secondary of deathPending) {
       const sp = gs.players[secondary.username];
       if (!sp) continue;
@@ -261,8 +273,7 @@ function executeEffects(gs, actorUsername, trigger, sourceCard) {
       }
     }
   }
-
-  return { results, dirtyPlayers };
+  return results;
 }
 
-module.exports = { executeEffects };
+module.exports = { executeEffects, processPendingDeaths };

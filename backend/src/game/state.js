@@ -39,6 +39,9 @@ function initGameState(room) {
       deck,                           // kept server-side for draw effects
       deckCount: deck.length,
       discard:   [],
+      plushPlayedThisTurn: 0,
+      scartiQuestoTurno:   0,
+      scartiTotali:        0,
     };
   }
 

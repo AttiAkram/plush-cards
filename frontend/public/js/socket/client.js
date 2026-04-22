@@ -54,6 +54,8 @@ export function connectSocket() {
   socket.on('hand_updated',      data => busEmit('socket:hand_updated',      data));
   socket.on('valid_slots',       data => busEmit('socket:valid_slots',       data));
   socket.on('effects_applied',       data => busEmit('socket:effects_applied',    data));
+  socket.on('attack_result',         data => busEmit('socket:attack_result',       data));
+  socket.on('card_discarded',        data => busEmit('socket:card_discarded',      data));
   socket.on('left_match',            ()   => busEmit('socket:left_match'));
   socket.on('player_left_match',     data => busEmit('socket:player_left_match',     data));
   socket.on('player_status_changed', data => busEmit('socket:player_status_changed', data));
@@ -109,4 +111,18 @@ export function requestValidSlots(cardUid) {
 
 export function leaveMatch() {
   getSocket()?.emit('leave_match');
+}
+
+/**
+ * @param {string} attackerUid
+ * @param {string} targetUsername
+ * @param {string} targetUid
+ */
+export function attack(attackerUid, targetUsername, targetUid) {
+  getSocket()?.emit('attack', { attackerUid, targetUsername, targetUid });
+}
+
+/** @param {string} cardUid */
+export function discardCard(cardUid) {
+  getSocket()?.emit('discard_card', { cardUid });
 }

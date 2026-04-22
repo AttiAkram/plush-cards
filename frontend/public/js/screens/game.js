@@ -15,13 +15,17 @@ import { showScreen }                             from '../router/index.js';
 import { on }                                     from '../events/emitter.js';
 import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
-         leaveMatch }                             from '../socket/client.js';
+         leaveMatch, attack, discardCard }        from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Drag state ────────────────────────────────────────────────────────────────
 
 let draggingCardUid   = null;
 let currentValidSlots = [];
+
+// ── Attack mode state ─────────────────────────────────────────────────────────
+
+let _attackModeCard = null;   // { uid, name, ... } card selected as attacker
 
 // ── Touch state ───────────────────────────────────────────────────────────────
 
@@ -73,6 +77,27 @@ function _moveGhost(cx, cy) {
 }
 
 function _removeGhost() { _ghostEl?.remove(); _ghostEl = null; }
+
+// ── Attack mode helpers ───────────────────────────────────────────────────────
+
+function enterAttackMode(card) {
+  _attackModeCard = card;
+  $('attack-mode-hint').classList.remove('hidden');
+  // Re-render opponents area so enemy cards get the attackable class
+  renderOpponentsArea(getState().gameState);
+  // Highlight selected attacker
+  $('player-field').querySelectorAll('.field-slot').forEach(s => {
+    const cardEl = s.querySelector('.card');
+    if (cardEl) cardEl.classList.toggle('attacker-selected', cardEl.dataset.uid === card.uid);
+  });
+}
+
+function exitAttackMode() {
+  _attackModeCard = null;
+  $('attack-mode-hint').classList.add('hidden');
+  $('player-field').querySelectorAll('.card.attacker-selected').forEach(c => c.classList.remove('attacker-selected'));
+  renderOpponentsArea(getState().gameState);
+}
 
 // ── Tap-select mode helpers ───────────────────────────────────────────────────
 
@@ -235,13 +260,31 @@ function renderOpponentsArea(gameState) {
         </div>
       </div>`;
 
-    // Field row with cards (clickable)
+    // Field row with cards (clickable / attackable in attack mode)
     const fieldRow = el('div', 'opp-zone-field');
     p.field.forEach(card => {
       const slotEl = el('div', 'field-slot');
       if (card) {
         const cardEl = createCardEl(card);
-        attachCardInspect(cardEl, card);
+        if (_attackModeCard) {
+          // Determine if this card is a valid attack target
+          const fieldPersonaggi = p.field.filter(c => c !== null && c.type === 'personaggio');
+          const canTarget = card.type === 'personaggio'
+            || (card.type === 'artefatto' && fieldPersonaggi.length === 0);
+          if (canTarget) {
+            cardEl.classList.add('attackable');
+            cardEl.addEventListener('click', e => {
+              e.stopPropagation();
+              const atk = _attackModeCard;
+              exitAttackMode();
+              attack(atk.uid, username, card.uid);
+            });
+          } else {
+            cardEl.classList.add('not-attackable');
+          }
+        } else {
+          attachCardInspect(cardEl, card);
+        }
         slotEl.appendChild(cardEl);
       } else {
         slotEl.innerHTML = `<svg class="icon-slot" viewBox="0 0 24 24" fill="none"
@@ -428,11 +471,13 @@ function openCardModal(card) {
      <span class="cm-stat cm-hp">♥ ${card.hp}</span>`;
   $('card-modal-desc').textContent = card.description;
 
-  // Show "Gioca" only when it's my turn and the card is in my hand
   const { gameState, username } = getState();
-  const isMyTurn = gameState?.currentTurn === username;
-  const inMyHand = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
-  $('card-modal-play').classList.toggle('hidden', !(isMyTurn && inMyHand));
+  const isMyTurn  = gameState?.currentTurn === username;
+  const inMyHand  = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
+  const inMyField = gameState?.players[username]?.field?.some(c => c?.uid === card.uid);
+  $('card-modal-play').classList.toggle('hidden',    !(isMyTurn && inMyHand));
+  $('card-modal-discard').classList.toggle('hidden', !(isMyTurn && inMyHand));
+  $('card-modal-attack').classList.toggle('hidden',  !(isMyTurn && inMyField));
 
   $('card-modal').classList.remove('hidden');
 }
@@ -758,12 +803,30 @@ function initGameActions() {
     if (card) enterTapSelectMode(card.uid, card);
   });
 
+  // "Attacca" button in modal → close modal + enter attack mode
+  $('card-modal-attack').addEventListener('click', () => {
+    const card = _currentModalCard;
+    closeCardModal();
+    if (card) enterAttackMode(card);
+  });
+
+  // "Scarta" button in modal → close modal + discard
+  $('card-modal-discard').addEventListener('click', () => {
+    const card = _currentModalCard;
+    closeCardModal();
+    if (card) discardCard(card.uid);
+  });
+
+  // Cancel attack mode button
+  $('btn-cancel-attack').addEventListener('click', exitAttackMode);
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeCardModal();
       closeZonePanel();
       closePlayerPanel();
       exitTapSelectMode();
+      exitAttackMode();
       return;
     }
     if (e.key === 'Enter'
@@ -848,14 +911,30 @@ function initSocketListeners() {
     renderPlayersBar(newGs);
     renderOpponentsArea(newGs);
     renderField(newGs.players[me]?.field ?? [], 'player-field');
+    updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
-    // Refresh open player panel for any player
-    for (const uname of Object.keys(newGs.players)) {
-      refreshPanelIfOpen(uname, newGs);
-    }
-    for (const msg of results) {
-      showToast(msg);
-    }
+    for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
+    for (const msg of results) showToast(msg);
+  });
+
+  on('socket:attack_result', ({ results, gameState: newGs }) => {
+    if (!newGs) return;
+    const me = getState().username;
+    setState({ gameState: newGs });
+    renderPlayersBar(newGs);
+    renderOpponentsArea(newGs);
+    renderField(newGs.players[me]?.field ?? [], 'player-field');
+    updateZoneCounts(newGs);
+    updateEndTurnBtn(newGs);
+    for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
+    for (const msg of results) showToast(msg);
+  });
+
+  on('socket:card_discarded', ({ gameState: newGs }) => {
+    if (!newGs) return;
+    setState({ gameState: newGs });
+    updateZoneCounts(newGs);
+    refreshPanelIfOpen(getState().username, newGs);
   });
 
   on('socket:valid_slots', ({ cardUid, validSlots }) => {

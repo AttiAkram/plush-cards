@@ -88,7 +88,8 @@
 }
 
 .card-damage { color: var(--c-red);   display: flex; align-items: center; gap: 2px; }
-.card-hp     { color: var(--c-green); display: flex; align-items: center; gap: 2px; }
+.card-hp            { color: var(--c-green); display: flex; align-items: center; gap: 2px; }
+.card-hp-damaged    { color: var(--c-red) !important; }
 
 .card-rarity-badge {
   font-size:      5px;

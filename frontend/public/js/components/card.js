@@ -48,6 +48,10 @@ export function creatureArtHtml(creatureId, size = 32) {
  */
 export function createCardEl(card) {
   const div = el('div', `card ${card.rarity}`);
+  if (card.uid) div.dataset.uid = card.uid;
+
+  const displayHp = card.currentHp !== undefined ? card.currentHp : card.hp;
+  const hpDamaged = card.currentHp !== undefined && card.currentHp < card.hp;
 
   div.innerHTML = `
     <div class="card-image-area">
@@ -58,7 +62,7 @@ export function createCardEl(card) {
     <div class="card-footer">
       <span class="card-damage">${SVG_SWORD} ${card.damage}</span>
       <span class="card-rarity-badge">${RARITY_LABELS[card.rarity] ?? card.rarity}</span>
-      <span class="card-hp">${SVG_HEART} ${card.hp}</span>
+      <span class="card-hp${hpDamaged ? ' card-hp-damaged' : ''}">${SVG_HEART} ${displayHp}</span>
     </div>`;
 
   return div;
