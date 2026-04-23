@@ -47,7 +47,7 @@ export function creatureArtHtml(creatureId, size = 32) {
  * @returns {HTMLElement}
  */
 export function createCardEl(card) {
-  const div = el('div', `card ${card.rarity}`);
+  const div = el('div', `card ${card.rarity}${card.haAttaccato ? ' card--attacked' : ''}`);
   if (card.uid) div.dataset.uid = card.uid;
 
   const displayHp = card.currentHp !== undefined ? card.currentHp : card.hp;

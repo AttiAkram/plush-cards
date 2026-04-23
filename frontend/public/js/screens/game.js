@@ -18,6 +18,32 @@ import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard }        from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
+// ── Error messages ────────────────────────────────────────────────────────────
+
+const _ERROR_MAP = {
+  'Non è il tuo turno':
+    "Non è il tuo turno.",
+  'Puoi giocare solo 1 personaggio per turno':
+    "Hai già giocato un personaggio questo turno.",
+  'Questa carta ha già attaccato questo turno':
+    "Questa carta ha già attaccato — aspetta il prossimo turno.",
+  'Elimina prima tutti i personaggi nemici per attaccare un artefatto':
+    "Non puoi colpire l'artefatto finché ci sono plush davanti.",
+  'Slot già occupato':
+    "Quello slot è già occupato.",
+  'Carta non trovata in mano':
+    "Carta non trovata nella tua mano.",
+  'Attaccante non trovato sul campo':
+    "Quella carta non è più in campo.",
+  'Bersaglio non trovato sul campo':
+    "Il bersaglio non è più in campo.",
+};
+
+function humanizeGameError(msg) {
+  if (typeof msg !== 'string') return 'Errore di gioco.';
+  return _ERROR_MAP[msg] ?? msg;
+}
+
 // ── Drag state ────────────────────────────────────────────────────────────────
 
 let draggingCardUid   = null;
@@ -555,10 +581,12 @@ function openCardModal(card) {
   const { gameState, username } = getState();
   const isMyTurn  = gameState?.currentTurn === username;
   const inMyHand  = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
-  const inMyField = gameState?.players[username]?.field?.some(c => c?.uid === card.uid);
+  const fieldCard = gameState?.players[username]?.field?.find(c => c?.uid === card.uid);
+  const inMyField = !!fieldCard;
+  const canAttack = isMyTurn && inMyField && !fieldCard?.haAttaccato;
   $('card-modal-play').classList.toggle('hidden',    !(isMyTurn && inMyHand));
   $('card-modal-discard').classList.toggle('hidden', !(isMyTurn && inMyHand));
-  $('card-modal-attack').classList.toggle('hidden',  !(isMyTurn && inMyField));
+  $('card-modal-attack').classList.toggle('hidden',  !canAttack);
 
   $('card-modal').classList.remove('hidden');
 }
@@ -1054,7 +1082,7 @@ function initSocketListeners() {
   });
 
   on('socket:error', msg => {
-    showToast(typeof msg === 'string' ? msg : 'Errore di gioco', true);
+    showToast(humanizeGameError(msg), true);
   });
 
   on('socket:left_match', () => {

@@ -190,7 +190,7 @@ function _inner(gs, trigger, candidates, dirtyPlayers, pendingDeaths) {
       const targets = resolveTargets(gs, owner, effect.target, card);
       for (const t of targets) {
         const msg = applyAction(gs, owner, effect.action, t, effect.params ?? {}, dirtyPlayers, pendingDeaths);
-        if (msg) results.push(msg);
+        if (msg) results.push(`[${card.name}] ${trigger} → ${msg}`);
       }
     }
   }

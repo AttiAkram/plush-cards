@@ -100,11 +100,12 @@ function registerGameHandlers(io, socket) {
     const { results: endResults, dirtyPlayers: endDirty } =
       executeEffects(gs, username, 'ALL_FINE_TURNO');
 
-    // Reset current player's turn counters
+    // Reset current player's turn counters and per-card attack flags
     const myState = gs.players[username];
     if (myState) {
       myState.plushPlayedThisTurn = 0;
       myState.scartiQuestoTurno   = 0;
+      myState.field.forEach(card => { if (card) card.haAttaccato = false; });
     }
 
     // Advance turn
@@ -169,7 +170,8 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Slot già occupato');
 
     const [playedCard] = myState.hand.splice(cardIdx, 1);
-    playedCard.currentHp = playedCard.hp;
+    playedCard.currentHp   = playedCard.hp;
+    playedCard.haAttaccato = false;
     myState.field[slotIndex] = playedCard;
 
     if (playedCard.type === 'personaggio')
@@ -210,6 +212,9 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Attaccante non trovato sul campo');
     const attacker = myState.field[attackerIdx];
 
+    if (attacker.haAttaccato)
+      return socket.emit('error_msg', 'Questa carta ha già attaccato questo turno');
+
     const targetIdx = enemyState.field.findIndex(c => c?.uid === targetUid);
     if (targetIdx === -1)
       return socket.emit('error_msg', 'Bersaglio non trovato sul campo');
@@ -238,6 +243,7 @@ function registerGameHandlers(io, socket) {
     target.currentHp   = (target.currentHp   ?? target.hp)   - atkDmg;
     attacker.currentHp = (attacker.currentHp ?? attacker.hp) - defDmg;
 
+    attacker.haAttaccato = true;
     results.push(`${attacker.name} attacca ${target.name}!`);
 
     if (attacker.currentHp <= 0)

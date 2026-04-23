@@ -91,6 +91,25 @@
 .card-hp            { color: var(--c-green); display: flex; align-items: center; gap: 2px; }
 .card-hp-damaged    { color: var(--c-red) !important; }
 
+/* Card has already attacked this turn */
+.card--attacked {
+  opacity: 0.55;
+  filter:  grayscale(0.4);
+}
+.card--attacked::after {
+  content:       'già attaccato';
+  position:      absolute;
+  bottom:        3px;
+  left:          0; right: 0;
+  text-align:    center;
+  font-size:     7px;
+  font-weight:   700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color:         var(--c-sub);
+  pointer-events: none;
+}
+
 .card-rarity-badge {
   font-size:      5px;
   text-transform: uppercase;
