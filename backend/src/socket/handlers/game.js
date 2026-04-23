@@ -2,7 +2,10 @@
 
 const store                              = require('../../store');
 const { initGameState }                  = require('../../game/state');
+const { createArtifactPool }             = require('../../game/deck');
 const { executeEffects, processPendingDeaths } = require('../../game/effects');
+
+const DRAFT_CHOICES = 3;   // artifact options shown to each player
 
 /** Returns true if `username` has admin or root role. */
 function isAdminUser(username) {
@@ -56,6 +59,24 @@ function hasGuardiaCentrale(pState) {
 }
 
 /**
+ * Finalise the draft phase: init game state with chosen artifacts and broadcast game_started.
+ */
+function _finalizeDraft(io, room, roomCode) {
+  const chosenArtifacts = {};
+  for (const [uname, card] of Object.entries(room.draftPicks)) {
+    if (card) chosenArtifacts[uname] = card;
+  }
+  room.status    = 'playing';
+  room.gameState = initGameState(room, chosenArtifacts);
+
+  // Clean up draft state
+  room.draftChoices = {};
+  room.draftPicks   = {};
+
+  io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
+}
+
+/**
  * Register game-related socket event handlers for one connection.
  *
  * @param {import('socket.io').Server} io
@@ -74,7 +95,7 @@ function registerGameHandlers(io, socket) {
   }
 
   // ── start_game ───────────────────────────────────────────────────────────────
-  // Accepts optional { debug: true } to allow single-player debug mode (admin/root only).
+  // Kicks off the artifact draft phase (or skips to game in debug mode).
 
   socket.on('start_game', ({ debug = false } = {}) => {
     const { room, roomCode } = getRoomAndState();
@@ -88,18 +109,83 @@ function registerGameHandlers(io, socket) {
     if (room.players.length < 2 && !debugAllowed)
       return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
 
-    // All non-host players must be ready (unless debug mode)
     if (!debugAllowed) {
       const allReady = room.players.every(p => room.ready[p.username]);
       if (!allReady)
         return socket.emit('error_msg', 'Non tutti i giocatori sono pronti');
     }
 
-    room.status    = 'playing';
-    room.gameState = initGameState(room);
-    if (debugAllowed) room.gameState.debugMode = true;
+    // Debug mode: skip draft, start immediately with random artifacts
+    if (debugAllowed) {
+      room.status    = 'playing';
+      room.gameState = initGameState(room, {});
+      room.gameState.debugMode = true;
+      return io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
+    }
 
-    io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
+    // ── Draft phase setup ────────────────────────────────────────────────────
+    const pool = createArtifactPool();
+    room.draftChoices = {};
+    room.draftPicks   = {};
+    room.status       = 'drafting';
+
+    const allUsernames = room.players.map(p => p.username);
+    let poolIdx = 0;
+
+    for (const { username: uname } of room.players) {
+      const choices = pool.slice(poolIdx, poolIdx + DRAFT_CHOICES);
+      poolIdx += DRAFT_CHOICES;
+      room.draftChoices[uname] = choices;
+
+      // If this player has no choices (pool exhausted), auto-pick null
+      if (choices.length === 0) {
+        room.draftPicks[uname] = null;
+      }
+    }
+
+    // Send private choices to each player
+    for (const { username: uname } of room.players) {
+      const sid = findSocketId(uname);
+      if (!sid) continue;
+      io.to(sid).emit('draft_started', {
+        choices:     room.draftChoices[uname] ?? [],
+        waitingFor:  allUsernames,
+      });
+    }
+
+    // If everyone was auto-resolved (no artifacts in pool), start game now
+    const waitingFor = allUsernames.filter(u => !(u in room.draftPicks));
+    if (waitingFor.length === 0) _finalizeDraft(io, room, roomCode);
+  });
+
+  // ── pick_artifact ────────────────────────────────────────────────────────────
+
+  socket.on('pick_artifact', ({ artifactUid }) => {
+    const { room, roomCode } = getRoomAndState();
+    if (!room || room.status !== 'drafting') return;
+    if (username in room.draftPicks) return; // already picked
+
+    const choices = room.draftChoices[username] ?? [];
+
+    // artifactUid === null means no artifact available (pool was exhausted)
+    if (artifactUid !== null) {
+      const chosen = choices.find(c => c.uid === artifactUid);
+      if (!chosen)
+        return socket.emit('error_msg', 'Artefatto non valido');
+      room.draftPicks[username] = chosen;
+    } else {
+      room.draftPicks[username] = null;
+    }
+
+    const waitingFor = room.players
+      .map(p => p.username)
+      .filter(u => !(u in room.draftPicks));
+
+    if (waitingFor.length > 0) {
+      io.to(roomCode).emit('draft_updated', { waitingFor });
+    } else {
+      _finalizeDraft(io, room, roomCode);
+    }
   });
 
   // ── end_turn ─────────────────────────────────────────────────────────────────

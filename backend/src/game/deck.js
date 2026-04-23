@@ -55,4 +55,33 @@ function createDecks() {
   };
 }
 
-module.exports = { createDecks };
+/**
+ * Build only the shuffled artifact pool (for draft phase).
+ * @returns {object[]}
+ */
+function createArtifactPool() {
+  const pool = [];
+  for (const def of store.cards.values()) {
+    if (!def.active || def.type !== 'artefatto') continue;
+    pool.push({ ...def, uid: uuidv4() });
+  }
+  return shuffle(pool);
+}
+
+/**
+ * Build only the personaggi deck (for game start after draft).
+ * @returns {object[]}
+ */
+function createPersonaggiDeck() {
+  const deck = [];
+  for (const def of store.cards.values()) {
+    if (!def.active || def.type === 'artefatto') continue;
+    const copies = RARITY_COPIES[def.rarity] ?? 1;
+    for (let i = 0; i < copies; i++) {
+      deck.push({ ...def, uid: uuidv4() });
+    }
+  }
+  return shuffle(deck);
+}
+
+module.exports = { createDecks, createArtifactPool, createPersonaggiDeck };

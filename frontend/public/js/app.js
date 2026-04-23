@@ -8,6 +8,7 @@
 import { initAuthScreen, enterAuth, clearSession }       from './screens/auth.js';
 import { initLobbyScreen, enterLobby }                   from './screens/lobby.js';
 import { initRoomScreen }                                from './screens/room.js';
+import { initDraftScreen }                               from './screens/draft.js';
 import { initGameScreen }                                from './screens/game.js';
 import { initChangePasswordScreen, enterChangePassword } from './screens/changePassword.js';
 import { initProfileScreen }                             from './screens/profile.js';
@@ -21,6 +22,7 @@ import { disconnectSocket }                              from './socket/client.j
 initAuthScreen();
 initLobbyScreen();
 initRoomScreen();
+initDraftScreen();
 initGameScreen();
 initChangePasswordScreen();
 initProfileScreen();

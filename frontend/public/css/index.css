@@ -29,5 +29,6 @@
 @import './screens/auth.css';
 @import './screens/lobby.css';
 @import './screens/room.css';
+@import './screens/draft.css';
 @import './screens/game.css';
 @import './screens/admin.css';

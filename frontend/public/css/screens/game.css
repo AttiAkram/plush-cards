@@ -1043,21 +1043,12 @@
   gap:        4px;
 }
 
-/* ── Artifact slot (player + opponent) ──────── */
-.artifact-row {
+/* ── Artifact slot (player: sits left of nexus in nexus-row) ── */
+.nexus-row {
   display:         flex;
   align-items:     center;
-  gap:             8px;
-  padding:         3px 0;
-}
-
-.artifact-slot-label {
-  font-size:      9px;
-  font-weight:    500;
-  color:          var(--c-sub);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  white-space:    nowrap;
+  justify-content: center;
+  gap:             10px;
 }
 
 .artifact-slot {
@@ -1070,8 +1061,11 @@
   border-radius:   var(--radius);
   background:      var(--c-bg);
   flex-shrink:     0;
+  cursor:          pointer;
+  transition:      border-color var(--t-fast);
 }
 
+.artifact-slot:hover { border-color: var(--c-sub); }
 .artifact-slot .icon-slot { width: 22px; height: 22px; color: var(--c-border); }
 
 .opp-artifact-row {

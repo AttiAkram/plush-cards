@@ -47,6 +47,10 @@ export function connectSocket() {
   socket.on('join_error',   msg   => busEmit('socket:join_error',  msg));
   socket.on('error_msg',    msg   => busEmit('socket:error',       msg));
 
+  // ── Draft events ─────────────────────────────────────────────────────────────
+  socket.on('draft_started', data => busEmit('socket:draft_started', data));
+  socket.on('draft_updated', data => busEmit('socket:draft_updated', data));
+
   // ── Game events ──────────────────────────────────────────────────────────────
   socket.on('game_started',      gs   => busEmit('socket:game_started',      gs));
   socket.on('turn_changed',      data => busEmit('socket:turn_changed',      data));
@@ -129,4 +133,9 @@ export function discardCard(cardUid) {
 
 export function toggleReady() {
   getSocket()?.emit('toggle_ready');
+}
+
+/** @param {string|null} artifactUid */
+export function pickArtifact(artifactUid) {
+  getSocket()?.emit('pick_artifact', { artifactUid });
 }

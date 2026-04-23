@@ -405,6 +405,38 @@
   </div>
 </section>
 
+<!-- ══════════════════════ SCREEN: DRAFT ══════════════════════ -->
+<section id="screen-draft" class="screen">
+  <div class="draft-board">
+
+    <div class="draft-header">
+      <div class="draft-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/>
+        </svg>
+      </div>
+      <h2 class="draft-title">Scegli il tuo Artefatto</h2>
+      <p class="draft-sub" id="draft-sub">Scegli 1 carta su 3 da portare in battaglia</p>
+    </div>
+
+    <!-- Three artifact cards -->
+    <div class="draft-cards" id="draft-cards"></div>
+
+    <!-- Confirm button -->
+    <button class="btn btn-primary btn-large btn-bounce" id="btn-confirm-artifact" disabled>
+      Conferma scelta
+    </button>
+
+    <!-- Waiting for others -->
+    <div class="draft-waiting hidden" id="draft-waiting">
+      <div class="spinner"></div>
+      <p class="draft-waiting-text" id="draft-waiting-text">In attesa degli altri giocatori…</p>
+    </div>
+
+  </div>
+</section>
+
 <!-- ══════════════════════ SCREEN: GAME ══════════════════════ -->
 <section id="screen-game" class="screen">
   <div class="game-board" id="game-board">
@@ -489,14 +521,6 @@
 
     <!-- Player area -->
     <div class="player-area" id="player-area">
-      <!-- Artifact slot (pre-assigned at game start) -->
-      <div class="artifact-row">
-        <div class="artifact-slot-label">Artefatto</div>
-        <div class="artifact-slot" id="player-artifact-slot">
-          <svg class="icon-slot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/></svg>
-        </div>
-      </div>
-
       <!-- Field slots -->
       <div class="field-row" id="player-field">
         <div class="field-slot" data-slot="0">
@@ -510,8 +534,15 @@
         </div>
       </div>
 
-      <!-- Nexus -->
+      <!-- Nexus + Artifact (same row, no extra vertical space) -->
       <div class="nexus-row">
+        <!-- Artifact slot: shown left of nexus -->
+        <div class="artifact-slot" id="player-artifact-slot" title="Il tuo artefatto">
+          <svg class="icon-slot" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/>
+          </svg>
+        </div>
         <div class="card nexus-card" id="player-nexus">
           <div class="nexus-glow"></div>
           <div class="card-image-area nexus-image-area">

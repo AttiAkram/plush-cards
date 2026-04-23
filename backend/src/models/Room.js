@@ -26,11 +26,13 @@ class Room {
     this.code       = generateCode();
     this.name       = name?.trim() || `Stanza di ${hostUsername}`;
     this.host       = hostUsername;
-    this.players    = [{ username: hostUsername }];
-    this.ready      = { [hostUsername]: false };
-    this.status     = 'waiting';          // 'waiting' | 'playing'
-    this.maxPlayers = ROOM_MAX_PLAYERS;
-    this.gameState  = null;
+    this.players       = [{ username: hostUsername }];
+    this.ready         = { [hostUsername]: false };
+    this.status        = 'waiting';   // 'waiting' | 'drafting' | 'playing'
+    this.maxPlayers    = ROOM_MAX_PLAYERS;
+    this.gameState     = null;
+    this.draftChoices  = {};          // { [username]: CardDef[] } — 3 options per player
+    this.draftPicks    = {};          // { [username]: CardDef }   — confirmed pick
   }
 
   // ── Player management ──────────────────────────────────────────────────────
@@ -72,7 +74,7 @@ class Room {
   // ── Predicates ─────────────────────────────────────────────────────────────
 
   isFull()                  { return this.players.length >= this.maxPlayers; }
-  isPlaying()               { return this.status === 'playing'; }
+  isPlaying()               { return this.status === 'playing' || this.status === 'drafting'; }
   hasPlayer(username)       { return this.players.some(p => p.username === username); }
 
   // ── Serialisation ──────────────────────────────────────────────────────────
