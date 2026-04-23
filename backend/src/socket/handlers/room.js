@@ -69,6 +69,17 @@ function registerRoomHandlers(io, socket) {
     io.to(code).emit('room_updated', room.toJSON());
   });
 
+  // ── toggle_ready ─────────────────────────────────────────────────────────────
+  socket.on('toggle_ready', () => {
+    const { roomCode } = store.sockets.get(socket.id) || {};
+    if (!roomCode) return;
+    const room = store.rooms.get(roomCode);
+    if (!room || room.isPlaying()) return;
+
+    room.toggleReady(username);
+    io.to(roomCode).emit('room_updated', room.toJSON());
+  });
+
   // ── leave_room ───────────────────────────────────────────────────────────────
   socket.on('leave_room', () => handleLeaveRoom(io, socket));
 }

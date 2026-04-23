@@ -36,15 +36,23 @@ function findSocketId(username) {
 
 /**
  * Strip server-only fields from game state before sending to clients.
- * The `deck` array stays server-side; clients only see `deckCount`.
+ * `gs.deck` stays server-side; clients only see `gs.deckCount`.
  */
 function sanitiseGs(gs) {
-  const out = { ...gs, players: {} };
-  for (const [uname, pState] of Object.entries(gs.players)) {
-    const { deck, ...pub } = pState;   // eslint-disable-line no-unused-vars
-    out.players[uname] = { ...pub, deckCount: pState.deck.length };
-  }
-  return out;
+  const { deck, ...pub } = gs;   // eslint-disable-line no-unused-vars
+  return { ...pub, deckCount: deck?.length ?? 0 };
+}
+
+/**
+ * Check if the enemy field has GUARDIA_CENTRALE — i.e. any field card with
+ * that passive effect active.  Used when deciding if an artifact can be attacked.
+ */
+function hasGuardiaCentrale(pState) {
+  return pState.field.some(card =>
+    card?.effects?.some(e =>
+      e.trigger === 'PASSIVO_SE_IN_CAMPO' && e.action === 'GUARDIA_CENTRALE'
+    )
+  );
 }
 
 /**
@@ -80,6 +88,13 @@ function registerGameHandlers(io, socket) {
     if (room.players.length < 2 && !debugAllowed)
       return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
 
+    // All non-host players must be ready (unless debug mode)
+    if (!debugAllowed) {
+      const allReady = room.players.every(p => room.ready[p.username]);
+      if (!allReady)
+        return socket.emit('error_msg', 'Non tutti i giocatori sono pronti');
+    }
+
     room.status    = 'playing';
     room.gameState = initGameState(room);
     if (debugAllowed) room.gameState.debugMode = true;
@@ -114,11 +129,11 @@ function registerGameHandlers(io, socket) {
     if (nextIdx === 0) gs.turnNumber += 1;
     gs.currentTurn = gs.turnOrder[nextIdx];
 
-    // Natural draw for the new player (before their start-of-turn effects)
+    // Natural draw for the new player from the shared deck (before start-of-turn effects)
     const nextState  = gs.players[gs.currentTurn];
     const drawnUsers = new Set();
     if (nextState) {
-      const drawn = nextState.deck.pop();
+      const drawn = gs.deck.pop();
       if (drawn) {
         nextState.hand.push(drawn);
         drawnUsers.add(gs.currentTurn);
@@ -159,8 +174,12 @@ function registerGameHandlers(io, socket) {
 
     const card = myState.hand[cardIdx];
 
-    // 1-plush-per-turn limit for personaggi
-    if (card.type === 'personaggio' && (myState.plushPlayedThisTurn ?? 0) >= 1)
+    // Reject artefatti from hand (artifacts are pre-assigned to artifactSlot)
+    if (card.type === 'artefatto')
+      return socket.emit('error_msg', 'Gli artefatti non possono essere giocati dalla mano');
+
+    // 1-plush-per-turn limit
+    if ((myState.plushPlayedThisTurn ?? 0) >= 1)
       return socket.emit('error_msg', 'Puoi giocare solo 1 personaggio per turno');
 
     if (slotIndex < 0 || slotIndex >= myState.field.length)
@@ -173,9 +192,7 @@ function registerGameHandlers(io, socket) {
     playedCard.currentHp   = playedCard.hp;
     playedCard.haAttaccato = false;
     myState.field[slotIndex] = playedCard;
-
-    if (playedCard.type === 'personaggio')
-      myState.plushPlayedThisTurn = (myState.plushPlayedThisTurn ?? 0) + 1;
+    myState.plushPlayedThisTurn = (myState.plushPlayedThisTurn ?? 0) + 1;
 
     io.to(roomCode).emit('card_played', {
       playerId:  username,
@@ -207,6 +224,7 @@ function registerGameHandlers(io, socket) {
     if (!myState || !enemyState)
       return socket.emit('error_msg', 'Giocatore non trovato');
 
+    // Find attacker on my field
     const attackerIdx = myState.field.findIndex(c => c?.uid === attackerUid);
     if (attackerIdx === -1)
       return socket.emit('error_msg', 'Attaccante non trovato sul campo');
@@ -215,20 +233,36 @@ function registerGameHandlers(io, socket) {
     if (attacker.haAttaccato)
       return socket.emit('error_msg', 'Questa carta ha già attaccato questo turno');
 
-    const targetIdx = enemyState.field.findIndex(c => c?.uid === targetUid);
-    if (targetIdx === -1)
-      return socket.emit('error_msg', 'Bersaglio non trovato sul campo');
-    const target = enemyState.field[targetIdx];
+    // Find target: first check field, then artifactSlot
+    let target        = null;
+    let targetIdx     = -1;
+    let isArtifact    = false;
 
-    // Can only attack an artefatto if the enemy has no personaggi on their field
-    if (target.type === 'artefatto') {
-      const hasPersonaggi = enemyState.field.some(c => c !== null && c.type === 'personaggio');
-      if (hasPersonaggi)
-        return socket.emit('error_msg', 'Elimina prima tutti i personaggi nemici per attaccare un artefatto');
+    const fieldIdx = enemyState.field.findIndex(c => c?.uid === targetUid);
+    if (fieldIdx !== -1) {
+      target    = enemyState.field[fieldIdx];
+      targetIdx = fieldIdx;
+    } else if (enemyState.artifactSlot?.uid === targetUid) {
+      target     = enemyState.artifactSlot;
+      isArtifact = true;
     }
 
-    const results      = [];
-    const dirtyPlayers = new Set();
+    if (!target)
+      return socket.emit('error_msg', 'Bersaglio non trovato sul campo');
+
+    // Artifact targeting rules:
+    // - can only attack artifact if no personaggi are on enemy field
+    // - GUARDIA_CENTRALE: even with empty field, a card with this passive blocks artifact attacks
+    if (isArtifact || target.type === 'artefatto') {
+      const fieldPersonaggi = enemyState.field.filter(c => c !== null && c.type === 'personaggio');
+      if (fieldPersonaggi.length > 0)
+        return socket.emit('error_msg', 'Elimina prima tutti i personaggi nemici per attaccare un artefatto');
+      if (hasGuardiaCentrale(enemyState))
+        return socket.emit('error_msg', "Un personaggio con Guardia Centrale protegge l'artefatto nemico");
+    }
+
+    const results       = [];
+    const dirtyPlayers  = new Set();
     const pendingDeaths = [];
 
     // Fire QUANDO_DICHIARA effects for the attacker
@@ -247,9 +281,19 @@ function registerGameHandlers(io, socket) {
     results.push(`${attacker.name} attacca ${target.name}!`);
 
     if (attacker.currentHp <= 0)
-      pendingDeaths.push({ card: attacker, username,       slotIndex: attackerIdx });
-    if (target.currentHp   <= 0)
-      pendingDeaths.push({ card: target,   username: targetUsername, slotIndex: targetIdx });
+      pendingDeaths.push({ card: attacker, username, slotIndex: attackerIdx });
+
+    // Handle target death
+    if (target.currentHp <= 0) {
+      if (isArtifact) {
+        // Artifact destroyed — remove from slot, push to global discard
+        enemyState.artifactSlot = null;
+        gs.discard.push({ ...target, owner: targetUsername });
+        results.push(`${target.name} è stato distrutto!`);
+      } else {
+        pendingDeaths.push({ card: target, username: targetUsername, slotIndex: targetIdx });
+      }
+    }
 
     results.push(...processPendingDeaths(gs, pendingDeaths, dirtyPlayers));
 
@@ -278,7 +322,7 @@ function registerGameHandlers(io, socket) {
     if (idx === -1) return socket.emit('error_msg', 'Carta non trovata in mano');
 
     const [card] = myState.hand.splice(idx, 1);
-    myState.discard.push(card);
+    gs.discard.push({ ...card, owner: username });   // global discard with owner
     myState.scartiQuestoTurno = (myState.scartiQuestoTurno ?? 0) + 1;
     myState.scartiTotali      = (myState.scartiTotali      ?? 0) + 1;
 
@@ -302,6 +346,10 @@ function registerGameHandlers(io, socket) {
 
     const card = myState.hand.find(c => c.uid === cardUid);
     if (!card) return socket.emit('valid_slots', { cardUid, validSlots: [] });
+
+    // Artefatti cannot be played from hand
+    if (card.type === 'artefatto')
+      return socket.emit('valid_slots', { cardUid, validSlots: [] });
 
     const validSlots = myState.field
       .map((s, i) => (s === null ? i : -1))

@@ -87,7 +87,7 @@ function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers, 
       const amount = Math.max(1, params.amount ?? 1);
       let drawn = 0;
       for (let i = 0; i < amount; i++) {
-        const c = targetState.deck.pop();
+        const c = gs.deck?.pop();   // global shared deck
         if (!c) break;
         targetState.hand.push(c);
         drawn++;
@@ -153,8 +153,9 @@ function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers, 
         gs.zones.absolute.push(cleanCard);
         return `${card.name} inviato nell'Assoluto`;
       }
-      // default: scarti
-      targetState.discard.push(cleanCard);
+      // default: scarti (global discard with owner tag)
+      cleanCard.owner = targetUser;
+      gs.discard.push(cleanCard);
       return `${card.name} inviato agli Scarti`;
     }
 
@@ -166,6 +167,9 @@ function applyAction(gs, actorUsername, action, resolved, params, dirtyPlayers, 
       [myState.field[a], myState.field[b]] = [myState.field[b], myState.field[a]];
       return `${actorUsername} scambia le posizioni sul campo`;
     }
+
+    case 'GUARDIA_CENTRALE':
+      return null; // passive marker — evaluated in attack handler, no runtime action
 
     case 'ABILITA_TRIGGER_GLOBALI':
       return null; // future
@@ -261,7 +265,8 @@ function processPendingDeaths(gs, pendingDeaths, dirtyPlayers) {
       pState.field[slotIndex] = null;
       const clean = { ...card };
       delete clean._pendingDeath;
-      pState.discard.push(clean);
+      clean.owner = username;
+      gs.discard.push(clean);
     }
 
     for (const secondary of deathPending) {
@@ -269,7 +274,7 @@ function processPendingDeaths(gs, pendingDeaths, dirtyPlayers) {
       if (!sp) continue;
       if (sp.field[secondary.slotIndex] === secondary.card) {
         sp.field[secondary.slotIndex] = null;
-        sp.discard.push({ ...secondary.card });
+        gs.discard.push({ ...secondary.card, owner: secondary.username });
       }
     }
   }

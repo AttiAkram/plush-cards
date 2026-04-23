@@ -1043,6 +1043,50 @@
   gap:        4px;
 }
 
+/* ── Artifact slot (player + opponent) ──────── */
+.artifact-row {
+  display:         flex;
+  align-items:     center;
+  gap:             8px;
+  padding:         3px 0;
+}
+
+.artifact-slot-label {
+  font-size:      9px;
+  font-weight:    500;
+  color:          var(--c-sub);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  white-space:    nowrap;
+}
+
+.artifact-slot {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           var(--card-w);
+  height:          var(--card-h);
+  border:          1.5px dashed var(--c-border);
+  border-radius:   var(--radius);
+  background:      var(--c-bg);
+  flex-shrink:     0;
+}
+
+.artifact-slot .icon-slot { width: 22px; height: 22px; color: var(--c-border); }
+
+.opp-artifact-row {
+  display:    flex;
+  align-items: center;
+  gap:        6px;
+  padding:    3px 0 2px;
+}
+
+.opp-artifact-empty {
+  font-size:  9px;
+  color:      var(--c-sub);
+  font-style: italic;
+}
+
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 600px) {
   .game-board { padding: 5px; gap: 4px; }

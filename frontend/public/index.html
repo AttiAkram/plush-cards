@@ -235,9 +235,14 @@
       </button>
     </div>
 
+    <!-- Ready button — visible to all players -->
+    <div class="ready-controls">
+      <button class="btn btn-primary btn-bounce" id="btn-ready">✓ Sono pronto!</button>
+    </div>
+
     <div id="waiting-msg" class="waiting-msg hidden">
       <div class="spinner"></div>
-      <p>In attesa che l'host inizi...</p>
+      <p>In attesa che l'host avvii...</p>
     </div>
   </div>
 </section>
@@ -484,6 +489,14 @@
 
     <!-- Player area -->
     <div class="player-area" id="player-area">
+      <!-- Artifact slot (pre-assigned at game start) -->
+      <div class="artifact-row">
+        <div class="artifact-slot-label">Artefatto</div>
+        <div class="artifact-slot" id="player-artifact-slot">
+          <svg class="icon-slot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/></svg>
+        </div>
+      </div>
+
       <!-- Field slots -->
       <div class="field-row" id="player-field">
         <div class="field-slot" data-slot="0">

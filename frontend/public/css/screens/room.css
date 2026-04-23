@@ -130,6 +130,30 @@
 }
 .btn-debug:hover { opacity: 1; }
 
+/* Ready controls */
+.ready-controls {
+  display:         flex;
+  justify-content: center;
+  padding:         4px 0;
+}
+
+/* Ready badges in player list */
+.ready-badge {
+  font-size:     10px;
+  font-weight:   600;
+  padding:       2px 8px;
+  border-radius: var(--radius-pill);
+  margin-left:   auto;
+}
+.ready-badge--yes {
+  background: #e8f5e9;
+  color:       #2e7d32;
+}
+.ready-badge--no {
+  background: var(--c-bg);
+  color:       var(--c-sub);
+}
+
 /* Waiting message */
 .waiting-msg {
   display:        flex;

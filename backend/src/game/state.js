@@ -1,7 +1,10 @@
 'use strict';
 
-const { createDeck }                       = require('./deck');
+const { createDecks }                      = require('./deck');
 const { HAND_SIZE, NEXUS_HP, FIELD_SIZE }  = require('../config');
+
+/** Roll one d20 (1–20). */
+function rollD20() { return Math.ceil(Math.random() * 20); }
 
 /**
  * Build the initial game state for a room that is about to start.
@@ -10,35 +13,29 @@ const { HAND_SIZE, NEXUS_HP, FIELD_SIZE }  = require('../config');
  * @returns {object} Serialisable game state sent to all clients.
  */
 function initGameState(room) {
-  const sharedDeck   = createDeck();
+  const { personaggiDeck, artifactPool } = createDecks();
+
+  // D20 roll for turn order — higher roll goes first; ties preserve room-join order
+  const rolls = room.players.map(p => ({ username: p.username, roll: rollD20() }));
+  rolls.sort((a, b) => b.roll - a.roll);
+  const turnOrder = rolls.map(r => r.username);
+
+  // Deal opening hands and assign one artifact per player
   const playerStates = {};
-
-  // Split the shared deck into per-player decks (roughly equal)
-  const perPlayer = Math.floor(sharedDeck.length / room.players.length);
-
-  for (let pi = 0; pi < room.players.length; pi++) {
-    const player = room.players[pi];
-    const start  = pi * perPlayer;
-    // Last player gets any remainder cards
-    const end    = pi === room.players.length - 1 ? sharedDeck.length : start + perPlayer;
-    const deck   = sharedDeck.slice(start, end);
-
-    // Deal opening hand
+  for (const { username } of room.players) {
     const hand = [];
     for (let i = 0; i < HAND_SIZE; i++) {
-      const card = deck.pop();
+      const card = personaggiDeck.pop();
       if (card) hand.push(card);
     }
 
-    playerStates[player.username] = {
-      username:  player.username,
-      status:    'active',
-      nexus:     { hp: NEXUS_HP, maxHp: NEXUS_HP },
+    playerStates[username] = {
+      username,
+      status:   'active',
+      nexus:    { hp: NEXUS_HP, maxHp: NEXUS_HP },
       hand,
-      field:     Array.from({ length: FIELD_SIZE }, () => null),
-      deck,                           // kept server-side for draw effects
-      deckCount: deck.length,
-      discard:   [],
+      field:    Array.from({ length: FIELD_SIZE }, () => null),
+      artifactSlot:        artifactPool.pop() ?? null,
       plushPlayedThisTurn: 0,
       scartiQuestoTurno:   0,
       scartiTotali:        0,
@@ -47,14 +44,17 @@ function initGameState(room) {
 
   return {
     players:     playerStates,
-    turnOrder:   room.players.map(p => p.username),
-    currentTurn: room.players[0].username,
+    turnOrder,
+    currentTurn: turnOrder[0],
     turnNumber:  1,
     phase:       'main',
+    deck:        personaggiDeck,   // server-only — stripped in sanitiseGs
+    discard:     [],               // global discard pile; each card has `owner` field
     zones: {
       void:     [],
       absolute: [],
     },
+    d20Rolls: rolls,               // sent to clients at game_started for display
   };
 }
 

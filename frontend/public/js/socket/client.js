@@ -126,3 +126,7 @@ export function attack(attackerUid, targetUsername, targetUid) {
 export function discardCard(cardUid) {
   getSocket()?.emit('discard_card', { cardUid });
 }
+
+export function toggleReady() {
+  getSocket()?.emit('toggle_ready');
+}

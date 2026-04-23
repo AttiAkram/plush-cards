@@ -3,20 +3,11 @@
 const { v4: uuidv4 } = require('uuid');
 const store          = require('../store');
 
-/** Copies per rarity for personaggi. */
+/** Copies per rarity for personaggi in the shared deck. */
 const RARITY_COPIES = {
   comune:      4,
   raro:        3,
   epico:       2,
-  mitico:      1,
-  leggendario: 1,
-};
-
-/** Artefatti use fewer copies regardless of rarity. */
-const ARTEFATTO_COPIES = {
-  comune:      2,
-  raro:        2,
-  epico:       1,
   mitico:      1,
   leggendario: 1,
 };
@@ -36,23 +27,32 @@ function shuffle(arr) {
 }
 
 /**
- * Build a full shuffled deck from the live card store (active cards only).
- * Each card gets a unique `uid` so duplicate copies can be told apart.
- * @returns {import('./cards').CardDef[]}
+ * Build the shared personaggi deck and a shuffled artifact pool.
+ * Personaggi are added with RARITY_COPIES duplicates.
+ * Artefatti each appear once in the pool (pre-assigned at game start).
+ *
+ * @returns {{ personaggiDeck: object[], artifactPool: object[] }}
  */
-function createDeck() {
-  const deck = [];
+function createDecks() {
+  const personaggiDeck = [];
+  const artifactPool   = [];
 
   for (const def of store.cards.values()) {
     if (!def.active) continue;
-    const copyTable = def.type === 'artefatto' ? ARTEFATTO_COPIES : RARITY_COPIES;
-    const copies    = copyTable[def.rarity] ?? 1;
-    for (let i = 0; i < copies; i++) {
-      deck.push({ ...def, uid: uuidv4() });
+    if (def.type === 'artefatto') {
+      artifactPool.push({ ...def, uid: uuidv4() });
+    } else {
+      const copies = RARITY_COPIES[def.rarity] ?? 1;
+      for (let i = 0; i < copies; i++) {
+        personaggiDeck.push({ ...def, uid: uuidv4() });
+      }
     }
   }
 
-  return shuffle(deck);
+  return {
+    personaggiDeck: shuffle(personaggiDeck),
+    artifactPool:   shuffle(artifactPool),
+  };
 }
 
-module.exports = { createDeck };
+module.exports = { createDecks };

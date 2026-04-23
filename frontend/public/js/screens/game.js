@@ -29,6 +29,8 @@ const _ERROR_MAP = {
     "Questa carta ha già attaccato — aspetta il prossimo turno.",
   'Elimina prima tutti i personaggi nemici per attaccare un artefatto':
     "Non puoi colpire l'artefatto finché ci sono plush davanti.",
+  "Un personaggio con Guardia Centrale protegge l'artefatto nemico":
+    "Un guardiano protegge l'artefatto — eliminalo prima.",
   'Slot già occupato':
     "Quello slot è già occupato.",
   'Carta non trovata in mano':
@@ -37,6 +39,8 @@ const _ERROR_MAP = {
     "Quella carta non è più in campo.",
   'Bersaglio non trovato sul campo':
     "Il bersaglio non è più in campo.",
+  'Gli artefatti non possono essere giocati dalla mano':
+    "Gli artefatti non si giocano dalla mano.",
 };
 
 function humanizeGameError(msg) {
@@ -156,6 +160,7 @@ function showCombatFloaters(oldGs, newGs) {
   for (const [uname, newP] of Object.entries(newGs.players)) {
     const oldP = oldGs.players[uname];
     if (!oldP) continue;
+    // Field cards
     newP.field.forEach((newCard, i) => {
       const oldCard = oldP.field[i];
       if (!oldCard || !newCard || oldCard.uid !== newCard.uid) return;
@@ -164,6 +169,15 @@ function showCombatFloaters(oldGs, newGs) {
       if (newHp < oldHp) showDamageFloater(findCardEl(oldCard.uid), `-${oldHp - newHp}`);
       if (newHp > oldHp) showDamageFloater(findCardEl(oldCard.uid), `+${newHp - oldHp}`);
     });
+    // Artifact slot
+    const oldArt = oldP.artifactSlot;
+    const newArt = newP.artifactSlot;
+    if (oldArt && newArt && oldArt.uid === newArt.uid) {
+      const oldHp = oldArt.currentHp ?? oldArt.hp;
+      const newHp = newArt.currentHp ?? newArt.hp;
+      if (newHp < oldHp) showDamageFloater(findCardEl(oldArt.uid), `-${oldHp - newHp}`);
+      if (newHp > oldHp) showDamageFloater(findCardEl(oldArt.uid), `+${newHp - oldHp}`);
+    }
   }
 }
 
@@ -368,16 +382,18 @@ function renderOpponentsArea(gameState) {
       </div>`;
 
     // Field row with cards (clickable / attackable in attack mode)
+    const fieldPersonaggi = p.field.filter(c => c !== null && c.type === 'personaggio');
+    const hasGuardia = p.field.some(c =>
+      c?.effects?.some(e => e.trigger === 'PASSIVO_SE_IN_CAMPO' && e.action === 'GUARDIA_CENTRALE')
+    );
     const fieldRow = el('div', 'opp-zone-field');
     p.field.forEach(card => {
       const slotEl = el('div', 'field-slot');
       if (card) {
         const cardEl = createCardEl(card);
         if (_attackModeCard) {
-          // Determine if this card is a valid attack target
-          const fieldPersonaggi = p.field.filter(c => c !== null && c.type === 'personaggio');
           const canTarget = card.type === 'personaggio'
-            || (card.type === 'artefatto' && fieldPersonaggi.length === 0);
+            || (fieldPersonaggi.length === 0 && !hasGuardia);
           if (canTarget) {
             cardEl.classList.add('attackable');
             cardEl.addEventListener('click', e => {
@@ -402,6 +418,32 @@ function renderOpponentsArea(gameState) {
       fieldRow.appendChild(slotEl);
     });
     zone.appendChild(fieldRow);
+
+    // Artifact slot row
+    const artRow = el('div', 'opp-artifact-row');
+    if (p.artifactSlot) {
+      const artEl = createCardEl(p.artifactSlot);
+      if (_attackModeCard) {
+        const canTargetArt = fieldPersonaggi.length === 0 && !hasGuardia;
+        if (canTargetArt) {
+          artEl.classList.add('attackable');
+          artEl.addEventListener('click', e => {
+            e.stopPropagation();
+            const atk = _attackModeCard;
+            exitAttackMode();
+            attack(atk.uid, username, p.artifactSlot.uid);
+          });
+        } else {
+          artEl.classList.add('not-attackable');
+        }
+      } else {
+        attachCardInspect(artEl, p.artifactSlot);
+      }
+      artRow.appendChild(artEl);
+    } else {
+      artRow.innerHTML = '<span class="opp-artifact-empty">Artefatto: —</span>';
+    }
+    zone.appendChild(artRow);
 
     // Clicking the zone header/name opens the player panel for that opponent
     zone.querySelector('.opp-zone-header').addEventListener('click', () => {
@@ -452,8 +494,9 @@ function openPlayerPanel(username, gameState) {
   // Field
   renderSlotsInto(p.field, $('pp-field'), true);
 
-  // Zone counts (discard is per-player; void/absolute are global)
-  $('pp-zone-discard-count').textContent  = p.discard?.length ?? 0;
+  // Zone counts (discard is global, filtered per player; void/absolute are global)
+  const discardCount = (gameState.discard ?? []).filter(c => c.owner === username).length;
+  $('pp-zone-discard-count').textContent  = discardCount;
   $('pp-zone-void-count').textContent     = gameState.zones?.void?.length ?? 0;
   $('pp-zone-absolute-count').textContent = gameState.zones?.absolute?.length ?? 0;
 
@@ -613,8 +656,7 @@ function attachCardInspect(cardEl, card) {
 const ZONE_TITLES = { discard: 'Scarti', void: 'Vuoto', absolute: 'Assoluto' };
 
 function updateZoneCounts(gameState) {
-  const me = getState().username;
-  $('zone-count-discard').textContent  = gameState.players[me]?.discard?.length ?? 0;
+  $('zone-count-discard').textContent  = gameState.discard?.length ?? 0;
   $('zone-count-void').textContent     = gameState.zones?.void?.length ?? 0;
   $('zone-count-absolute').textContent = gameState.zones?.absolute?.length ?? 0;
 }
@@ -622,14 +664,19 @@ function updateZoneCounts(gameState) {
 /**
  * @param {string} zoneName
  * @param {object} gameState
- * @param {string} [targetUsername]  — whose discard to show (defaults to self)
+ * @param {string} [targetUsername]  — filter discard by owner when provided
  */
 function openZonePanel(zoneName, gameState, targetUsername) {
-  const username = targetUsername ?? getState().username;
   let cards;
-  if (zoneName === 'discard')  cards = gameState.players[username]?.discard ?? [];
-  else if (zoneName === 'void') cards = gameState.zones?.void ?? [];
-  else                          cards = gameState.zones?.absolute ?? [];
+  if (zoneName === 'discard') {
+    const all = gameState.discard ?? [];
+    // If opened from player panel, filter to that player's cards
+    cards = targetUsername ? all.filter(c => c.owner === targetUsername) : all;
+  } else if (zoneName === 'void') {
+    cards = gameState.zones?.void ?? [];
+  } else {
+    cards = gameState.zones?.absolute ?? [];
+  }
 
   const titleSuffix = targetUsername && targetUsername !== getState().username
     ? ` di ${targetUsername}` : '';
@@ -874,6 +921,27 @@ function initTouchDrag() {
 // FULL BOARD RENDER
 // ──────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Render a single artifact card (or empty placeholder) into a container.
+ * @param {object|null} artifactCard
+ * @param {string}      containerId
+ */
+function renderArtifactSlot(artifactCard, containerId) {
+  const container = $(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  if (artifactCard) {
+    const cardEl = createCardEl(artifactCard);
+    attachCardInspect(cardEl, artifactCard);
+    container.appendChild(cardEl);
+  } else {
+    container.innerHTML = `<svg class="icon-slot" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/>
+    </svg>`;
+  }
+}
+
 export function renderGameBoard(gameState) {
   setState({ gameState });
   const myState = gameState.players[getState().username];
@@ -885,10 +953,11 @@ export function renderGameBoard(gameState) {
   updateEndTurnBtn(gameState);
   updateZoneCounts(gameState);
 
-  $('deck-count').textContent = `${myState.deckCount} carte`;
+  $('deck-count').textContent = `${gameState.deckCount ?? 0} carte`;
   updateNexus(myState.nexus);
   renderHand(myState.hand);
   renderField(myState.field, 'player-field');
+  renderArtifactSlot(myState.artifactSlot, 'player-artifact-slot');
 
   // Debug badge — visible only in single-player test games
   $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
@@ -969,6 +1038,13 @@ function initSocketListeners() {
   on('socket:game_started', gameState => {
     renderGameBoard(gameState);
     showScreen('game');
+    // Show D20 turn order
+    if (gameState.d20Rolls?.length) {
+      const rolls = gameState.d20Rolls.map(r => `${r.username} [${r.roll}]`).join(' › ');
+      addToLog(`D20 — ordine turni: ${rolls}`, 'system');
+    }
+    const me = getState().username;
+    showTurnBanner(gameState.currentTurn === me ? 'Turno tuo!' : `Primo turno: ${gameState.currentTurn}`);
   });
 
   on('socket:turn_changed', ({ currentTurn, turnNumber }) => {
@@ -1029,8 +1105,10 @@ function initSocketListeners() {
     renderPlayersBar(newGs);
     renderOpponentsArea(newGs);
     renderField(newGs.players[me]?.field ?? [], 'player-field');
+    renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
     updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
+    $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
     for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
     for (const msg of results) {
       addToLog(msg, 'effect');
@@ -1047,8 +1125,10 @@ function initSocketListeners() {
     renderPlayersBar(newGs);
     renderOpponentsArea(newGs);
     renderField(newGs.players[me]?.field ?? [], 'player-field');
+    renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
     updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
+    $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
     for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
     for (const msg of results) {
       addToLog(msg, 'attack');
@@ -1061,6 +1141,7 @@ function initSocketListeners() {
     addToLog(`${who} scarta una carta`, 'system');
     setState({ gameState: newGs });
     updateZoneCounts(newGs);
+    $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
     refreshPanelIfOpen(getState().username, newGs);
   });
 

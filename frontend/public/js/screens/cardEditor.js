@@ -29,6 +29,7 @@ export const ACTIONS = [
   { value: 'SPOSTA_CARTA_DI_ZONA',    label: 'Sposta carta di zona',     params: ['destinazione'] },
   { value: 'SCAMBIA_POSIZIONI_CAMPO', label: 'Scambia posizioni campo',  params: [] },
   { value: 'ABILITA_TRIGGER_GLOBALI', label: 'Abilita trigger globali',  params: [] },
+  { value: 'GUARDIA_CENTRALE',       label: "Guardia Centrale (protegge artefatto)", params: [] },
 ];
 
 export const TARGETS = [

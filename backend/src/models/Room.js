@@ -27,6 +27,7 @@ class Room {
     this.name       = name?.trim() || `Stanza di ${hostUsername}`;
     this.host       = hostUsername;
     this.players    = [{ username: hostUsername }];
+    this.ready      = { [hostUsername]: false };
     this.status     = 'waiting';          // 'waiting' | 'playing'
     this.maxPlayers = ROOM_MAX_PLAYERS;
     this.gameState  = null;
@@ -38,16 +39,34 @@ class Room {
   addPlayer(username) {
     if (this.isFull() || this.hasPlayer(username)) return false;
     this.players.push({ username });
+    this.ready[username] = false;
     return true;
   }
 
   /** @param {string} username */
   removePlayer(username) {
     this.players = this.players.filter(p => p.username !== username);
+    delete this.ready[username];
     // Promote next player to host if needed
     if (this.players.length > 0 && this.host === username) {
       this.host = this.players[0].username;
     }
+  }
+
+  /**
+   * Toggle the ready state for a player.
+   * @param {string} username
+   * @returns {boolean} new ready value
+   */
+  toggleReady(username) {
+    if (!this.hasPlayer(username)) return false;
+    this.ready[username] = !this.ready[username];
+    return this.ready[username];
+  }
+
+  /** @returns {boolean} true if all players are ready */
+  allReady() {
+    return this.players.every(p => this.ready[p.username]);
   }
 
   // ── Predicates ─────────────────────────────────────────────────────────────
@@ -65,6 +84,7 @@ class Room {
       name:       this.name,
       host:       this.host,
       players:    this.players,
+      ready:      { ...this.ready },
       status:     this.status,
       maxPlayers: this.maxPlayers,
     };
