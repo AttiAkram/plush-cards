@@ -310,6 +310,7 @@ const STATUS_ICONS = {
   active:       '',
   disconnected: '<span class="ps-dot ps-dot--disc" title="Disconnesso">↯</span>',
   left:         '<span class="ps-dot ps-dot--left" title="Ha abbandonato">✕</span>',
+  eliminated:   '<span class="ps-dot ps-dot--elim" title="Eliminato">✕</span>',
 };
 
 function renderPlayersBar(gameState) {
@@ -320,13 +321,14 @@ function renderPlayersBar(gameState) {
 
   const me = getState().username;
 
-  for (const username of gameState.turnOrder) {
+  for (const username of Object.keys(gameState.players)) {
     const p      = gameState.players[username];
     if (!p) continue;
-    const isMe   = username === me;
-    const isTurn = gameState.currentTurn === username;
-    const status = p.status ?? 'active';
-    const hpPct  = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const isMe        = username === me;
+    const isTurn      = gameState.currentTurn === username;
+    const status      = p.status ?? 'active';
+    const isEliminated = status === 'eliminated';
+    const hpPct       = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
 
     const pill = el('div',
       `player-pill${isTurn ? ' is-turn' : ''}${isMe ? ' is-me' : ''} status-${status}`);
@@ -337,11 +339,13 @@ function renderPlayersBar(gameState) {
         <div class="player-pill-name">
           ${escHtml(username)}
           ${isMe ? '<span class="you-badge">tu</span>' : ''}
+          ${isEliminated ? '<span class="elim-badge">Eliminato</span>' : ''}
         </div>
+        ${isEliminated ? '' : `
         <div class="player-pill-hp">
           <div class="player-hp-bar"><div class="player-hp-fill" style="width:${hpPct}%"></div></div>
           <span class="player-hp-text">${p.nexus.hp}</span>
-        </div>
+        </div>`}
       </div>
       ${STATUS_ICONS[status] ?? ''}`;
 
@@ -362,14 +366,15 @@ function renderOpponentsArea(gameState) {
   area.innerHTML = '';
   const myName = getState().username;
 
-  for (const username of gameState.turnOrder) {
+  for (const username of Object.keys(gameState.players)) {
     if (username === myName) continue;
     const p = gameState.players[username];
     if (!p) continue;
 
-    const hpPct    = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
-    const isActive = gameState.currentTurn === username;
-    const zone     = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}`);
+    const hpPct       = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const isActive    = gameState.currentTurn === username;
+    const isEliminated = (p.status ?? 'active') === 'eliminated';
+    const zone         = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}${isEliminated ? ' opp-zone--eliminated' : ''}`);
 
     // Header: name + HP bar
     zone.innerHTML = `
@@ -970,6 +975,10 @@ export function renderGameBoard(gameState) {
 function initGameActions() {
   $('btn-end-turn').addEventListener('click', () => { setEndTurnPending(true); endTurn(); });
   $('btn-leave-match').addEventListener('click', () => leaveMatch());
+  $('btn-game-over-lobby').addEventListener('click', () => {
+    $('game-over-overlay').classList.add('hidden');
+    leaveMatch();
+  });
 
   $('card-modal-close').addEventListener('click', closeCardModal);
   $('card-modal-overlay').addEventListener('click', closeCardModal);
@@ -1164,6 +1173,26 @@ function initSocketListeners() {
 
   on('socket:error', msg => {
     showToast(humanizeGameError(msg), true);
+  });
+
+  on('socket:player_eliminated', ({ username: who }) => {
+    const gs = getState().gameState;
+    const me = getState().username;
+    const msg = who === me ? 'Sei stato eliminato!' : `${who} è stato eliminato!`;
+    addToLog(msg, 'system');
+    showToast(msg, who === me);
+    if (gs) { renderPlayersBar(gs); renderOpponentsArea(gs); }
+  });
+
+  on('socket:game_over', ({ winner }) => {
+    const me = getState().username;
+    const isWinner = winner === me;
+    $('game-over-title').textContent    = isWinner ? 'Hai vinto!' : 'Fine partita';
+    $('game-over-subtitle').textContent = winner
+      ? (isWinner ? 'Complimenti, hai eliminato tutti gli avversari.' : `${winner} ha vinto la partita.`)
+      : 'Pareggio — nessun vincitore.';
+    $('game-over-overlay').classList.remove('hidden');
+    addToLog(winner ? `${winner} vince la partita!` : 'Fine partita — pareggio.', 'system');
   });
 
   on('socket:left_match', () => {

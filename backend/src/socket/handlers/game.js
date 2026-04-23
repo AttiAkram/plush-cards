@@ -370,12 +370,29 @@ function registerGameHandlers(io, socket) {
       pendingDeaths.push({ card: attacker, username, slotIndex: attackerIdx });
 
     // Handle target death
+    let eliminatedUsername = null;
     if (target.currentHp <= 0) {
       if (isArtifact) {
-        // Artifact destroyed — remove from slot, push to global discard
+        // Artifact destroyed — player eliminated
         enemyState.artifactSlot = null;
         gs.discard.push({ ...target, owner: targetUsername });
         results.push(`${target.name} è stato distrutto!`);
+
+        eliminatedUsername    = targetUsername;
+        enemyState.status     = 'eliminated';
+        results.push(`${targetUsername} è stato eliminato!`);
+
+        // All field cards die (fire ON_MORTE normally via pendingDeaths)
+        for (let i = 0; i < enemyState.field.length; i++) {
+          const fc = enemyState.field[i];
+          if (fc) pendingDeaths.push({ card: fc, username: targetUsername, slotIndex: i });
+        }
+
+        // Remove from active turn order
+        gs.turnOrder = gs.turnOrder.filter(u => u !== targetUsername);
+        if (gs.currentTurn === targetUsername) {
+          gs.currentTurn = gs.turnOrder[0] ?? null;
+        }
       } else {
         pendingDeaths.push({ card: target, username: targetUsername, slotIndex: targetIdx });
       }
@@ -389,6 +406,17 @@ function registerGameHandlers(io, socket) {
     for (const uname of dirtyPlayers) {
       const sid = findSocketId(uname);
       if (sid) io.to(sid).emit('hand_updated', { hand: gs.players[uname].hand });
+    }
+
+    // Emit elimination / game-over events after attack_result
+    if (eliminatedUsername) {
+      io.to(roomCode).emit('player_eliminated', { username: eliminatedUsername });
+
+      if (gs.turnOrder.length <= 1) {
+        const winner = gs.turnOrder[0] ?? null;
+        room.status  = 'finished';
+        io.to(roomCode).emit('game_over', { winner });
+      }
     }
   });
 

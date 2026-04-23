@@ -63,6 +63,8 @@ export function connectSocket() {
   socket.on('left_match',            ()   => busEmit('socket:left_match'));
   socket.on('player_left_match',     data => busEmit('socket:player_left_match',     data));
   socket.on('player_status_changed', data => busEmit('socket:player_status_changed', data));
+  socket.on('player_eliminated',     data => busEmit('socket:player_eliminated',     data));
+  socket.on('game_over',             data => busEmit('socket:game_over',             data));
 }
 
 // ── Room actions ──────────────────────────────────────────────────────────────

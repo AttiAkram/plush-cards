@@ -1101,3 +1101,79 @@
 @media (max-width: 380px) {
   .game-board { padding: 4px; gap: 3px; }
 }
+
+/* ── Eliminated player badge & pill ─────────── */
+.elim-badge {
+  display:       inline-block;
+  padding:       1px 5px;
+  border-radius: 4px;
+  font-size:     9px;
+  font-weight:   700;
+  background:    #ef4444;
+  color:         #fff;
+  margin-left:   4px;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+
+.player-pill.status-eliminated {
+  opacity:      0.42;
+  filter:       grayscale(0.6);
+  pointer-events: none;
+}
+
+.ps-dot--elim {
+  font-size:  14px;
+  color:      #ef4444;
+  line-height: 1;
+}
+
+.opp-zone.opp-zone--eliminated {
+  opacity:      0.4;
+  filter:       grayscale(0.7);
+  pointer-events: none;
+}
+
+/* ── Game Over overlay ──────────────────────── */
+.game-over-overlay {
+  position:         fixed;
+  inset:            0;
+  background:       rgba(0, 0, 0, 0.72);
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  z-index:          500;
+}
+.game-over-overlay.hidden { display: none; }
+
+.game-over-box {
+  background:     var(--c-white);
+  border-radius:  var(--radius-card);
+  padding:        36px 28px;
+  text-align:     center;
+  max-width:      340px;
+  width:          90%;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            16px;
+  box-shadow:     0 24px 64px rgba(0,0,0,0.3);
+}
+
+.game-over-icon svg {
+  color: var(--c-text);
+}
+
+.game-over-title {
+  font-size:   26px;
+  font-weight: 800;
+  color:       var(--c-text);
+  line-height: 1.1;
+}
+
+.game-over-subtitle {
+  font-size:   13px;
+  color:       var(--c-sub);
+  line-height: 1.4;
+  max-width:   260px;
+}
