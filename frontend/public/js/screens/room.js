@@ -64,7 +64,8 @@ function updateControls(room) {
   }
 
   $('host-controls').classList.toggle('hidden', !isHost);
-  $('waiting-msg').classList.toggle('hidden',    isHost);
+  // Non-host: show waiting spinner only AFTER they've pressed ready
+  $('waiting-msg').classList.toggle('hidden', isHost || !iAmReady);
 
   if (isHost) {
     const canStart = room.players.length >= 2 && allReady;
