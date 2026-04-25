@@ -4,6 +4,7 @@ const store                              = require('../../store');
 const { initGameState }                  = require('../../game/state');
 const { createArtifactPool }             = require('../../game/deck');
 const { executeEffects, processPendingDeaths } = require('../../game/effects');
+const sessions                           = require('../../game/sessions');
 
 const DRAFT_CHOICES = 3;   // artifact options shown to each player
 
@@ -525,7 +526,7 @@ function registerGameHandlers(io, socket) {
   // type 'stat'  — change HP or ATK of any card by delta
   // type 'move'  — move a card from wherever it is to a target zone
 
-  socket.on('manual_edit', ({ type, cardUid, stat, delta, to, toUsername, slotIndex } = {}) => {
+  socket.on('manual_edit', ({ type, cardUid, stat, delta, color, to, toUsername, slotIndex } = {}) => {
     const { room, roomCode, gs } = getRoomAndState();
     if (!gs || room.mode !== 'campaign')
       return socket.emit('error_msg', 'Solo in modalità campagna');
@@ -552,6 +553,14 @@ function registerGameHandlers(io, socket) {
         card.damage = Math.max(0, (card.damage ?? 0) + d);
         log = `[GM] ${username} → ${card.name}: ATK ${d >= 0 ? '+' : ''}${d} (ora ${card.damage})`;
       }
+    } else if (type === 'marker') {
+      const VALID = ['green', 'red', 'blue', 'yellow'];
+      if (!VALID.includes(color)) return socket.emit('error_msg', 'Colore marker non valido');
+      const d = Number(delta) || 1;
+      if (!card.markers) card.markers = { green: 0, red: 0, blue: 0, yellow: 0 };
+      card.markers[color] = Math.max(0, Math.min(5, (card.markers[color] ?? 0) + d));
+      const LABELS = { green: 'verde', red: 'rosso', blue: 'blu', yellow: 'giallo' };
+      log = `[GM] ${username} → ${card.name}: marker ${LABELS[color]} ora ${card.markers[color]}`;
     } else if (type === 'move') {
       const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom'];
       if (!validTo.includes(to)) return socket.emit('error_msg', 'Destinazione non valida');
@@ -612,6 +621,70 @@ function registerGameHandlers(io, socket) {
 
     const publicGs = sanitiseGs(gs);
     io.to(roomCode).emit('manual_edit_applied', { gameState: publicGs, log });
+  });
+
+  // ── gm_note (campaign only, GM only) ────────────────────────────────────────
+
+  socket.on('gm_note', ({ text, type = 'note' } = {}) => {
+    const { room, roomCode } = getRoomAndState();
+    if (!room || room.mode !== 'campaign') return;
+    const isGM = room.host === username || isAdminUser(username);
+    if (!isGM) return socket.emit('error_msg', 'Solo il GM può aggiungere note');
+    const clean = String(text ?? '').trim();
+    if (!clean) return;
+    io.to(roomCode).emit('gm_note', { username, text: clean, type });
+  });
+
+  // ── request_deck (campaign only, GM only) ────────────────────────────────────
+
+  socket.on('request_deck', () => {
+    const { room, gs } = getRoomAndState();
+    if (!gs || room.mode !== 'campaign') return;
+    const isGM = room.host === username || isAdminUser(username);
+    if (!isGM) return socket.emit('error_msg', 'Solo il GM può vedere il mazzo');
+    socket.emit('deck_contents', { deck: gs.deck ?? [] });
+  });
+
+  // ── save_session (campaign only, GM only) ────────────────────────────────────
+
+  socket.on('save_session', ({ logEntries = [] } = {}) => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!gs || room.mode !== 'campaign') return;
+    const isGM = room.host === username || isAdminUser(username);
+    if (!isGM) return socket.emit('error_msg', 'Solo il GM può salvare la sessione');
+
+    const savedAt = new Date().toISOString();
+    sessions.saveSession(username, { savedAt, roomName: room.name, gameState: gs, logEntries });
+    room.hasSavedSession = true;
+    socket.emit('session_saved', { savedAt });
+    io.to(roomCode).emit('room_updated', room.toJSON());
+  });
+
+  // ── restore_session (campaign only, GM only) ─────────────────────────────────
+
+  socket.on('restore_session', () => {
+    const { room, roomCode } = getRoomAndState();
+    if (!room || room.mode !== 'campaign') return;
+    const isGM = room.host === username || isAdminUser(username);
+    if (!isGM) return socket.emit('error_msg', 'Solo il GM può ripristinare la sessione');
+
+    const saved = sessions.loadSession(username);
+    if (!saved) return socket.emit('error_msg', 'Nessuna sessione salvata trovata');
+
+    room.status    = 'playing';
+    room.gameState = saved.gameState;
+
+    io.to(roomCode).emit('session_restored', {
+      gameState:  sanitiseGs(saved.gameState),
+      logEntries: saved.logEntries ?? [],
+      savedAt:    saved.savedAt,
+    });
+
+    // Send private hands to each connected player
+    for (const [uname, pState] of Object.entries(saved.gameState.players)) {
+      const sid = findSocketId(uname);
+      if (sid) io.to(sid).emit('hand_updated', { hand: pState.hand });
+    }
   });
 
   // ── leave_match ───────────────────────────────────────────────────────────────

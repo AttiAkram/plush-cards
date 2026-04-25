@@ -6,6 +6,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+    volumes:
+      - ./data/sessions:/app/data/sessions
     networks:
       - plush-net
     healthcheck:

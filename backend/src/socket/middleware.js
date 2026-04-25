@@ -12,7 +12,6 @@ const { sessions } = require('../store');
  */
 function socketAuth(socket, next) {
   const token = socket.handshake.auth?.token;
-
   if (!token || !sessions.has(token)) {
     return next(new Error('Non autorizzato'));
   }

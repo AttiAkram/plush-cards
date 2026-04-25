@@ -26,8 +26,9 @@ class Room {
     this.code       = generateCode();
     this.name       = name?.trim() || `Stanza di ${hostUsername}`;
     this.host       = hostUsername;
-    this.mode          = mode === 'campaign' ? 'campaign' : 'rules';
-    this.players       = [{ username: hostUsername }];
+    this.mode             = mode === 'campaign' ? 'campaign' : 'rules';
+    this.hasSavedSession  = false;
+    this.players          = [{ username: hostUsername }];
     this.ready         = { [hostUsername]: false };
     this.status        = 'waiting';   // 'waiting' | 'drafting' | 'playing' | 'finished'
     this.maxPlayers    = ROOM_MAX_PLAYERS;
@@ -86,8 +87,9 @@ class Room {
       code:       this.code,
       name:       this.name,
       host:       this.host,
-      mode:       this.mode,
-      players:    this.players,
+      mode:             this.mode,
+      hasSavedSession:  this.hasSavedSession,
+      players:          this.players,
       ready:      { ...this.ready },
       status:     this.status,
       maxPlayers: this.maxPlayers,

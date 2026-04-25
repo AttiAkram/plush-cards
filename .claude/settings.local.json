@@ -8,7 +8,8 @@
       "Bash(rm -rf /home/akram/Documents/plush/node_modules /home/akram/Documents/plush/public)",
       "Bash(docker compose:*)",
       "Bash(curl -s http://localhost/api/health)",
-      "Bash(curl -s http://localhost/)"
+      "Bash(curl -s http://localhost/)",
+      "Bash(git push *)"
     ]
   }
 }

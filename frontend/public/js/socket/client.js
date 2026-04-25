@@ -66,6 +66,10 @@ export function connectSocket() {
   socket.on('player_eliminated',     data => busEmit('socket:player_eliminated',     data));
   socket.on('game_over',             data => busEmit('socket:game_over',             data));
   socket.on('manual_edit_applied',   data => busEmit('socket:manual_edit_applied',   data));
+  socket.on('gm_note',               data => busEmit('socket:gm_note',               data));
+  socket.on('deck_contents',         data => busEmit('socket:deck_contents',          data));
+  socket.on('session_saved',         data => busEmit('socket:session_saved',          data));
+  socket.on('session_restored',      data => busEmit('socket:session_restored',       data));
 }
 
 // ── Room actions ──────────────────────────────────────────────────────────────
@@ -148,8 +152,26 @@ export function pickArtifact(artifactUid) {
 
 /**
  * Campaign-mode manual edit.
- * @param {object} payload — { type, cardUid, stat?, delta?, to?, toUsername?, slotIndex? }
+ * @param {object} payload — { type, cardUid, stat?, delta?, color?, to?, toUsername?, slotIndex? }
  */
 export function manualEdit(payload) {
   getSocket()?.emit('manual_edit', payload);
+}
+
+/** @param {string} text @param {'note'|'chapter'} [type] */
+export function sendGmNote(text, type = 'note') {
+  getSocket()?.emit('gm_note', { text, type });
+}
+
+export function requestDeck() {
+  getSocket()?.emit('request_deck');
+}
+
+/** @param {Array} logEntries */
+export function saveSession(logEntries) {
+  getSocket()?.emit('save_session', { logEntries });
+}
+
+export function restoreSession() {
+  getSocket()?.emit('restore_session');
 }

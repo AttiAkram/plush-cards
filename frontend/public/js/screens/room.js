@@ -7,7 +7,7 @@ import { getState, setState } from '../state/store.js';
 import { showScreen }         from '../router/index.js';
 import { showToast }          from '../components/toast.js';
 import { on }                 from '../events/emitter.js';
-import { leaveRoom, startGame, startDebugGame, toggleReady } from '../socket/client.js';
+import { leaveRoom, startGame, startDebugGame, toggleReady, restoreSession } from '../socket/client.js';
 import { enterLobby }         from './lobby.js';
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -49,34 +49,52 @@ function renderPlayerList(room) {
 
 function updateControls(room) {
   const { username, role } = getState();
-  const isHost  = room.host === username;
-  const isAdmin = role === 'root' || role === 'admin';
-  const ready   = room.ready ?? {};
-  const iAmReady = !!ready[username];
-  const allReady = room.players.every(p => ready[p.username]);
+  const isHost       = room.host === username;
+  const isAdmin      = role === 'root' || role === 'admin';
+  const isCampaign   = room.mode === 'campaign';
+  const ready        = room.ready ?? {};
+  const iAmReady     = !!ready[username];
+  const allReady     = room.players.every(p => ready[p.username]);
 
-  // Ready button — visible to everyone
+  // Ready button — hide in campaign mode (host starts freely)
   const readyBtn = $('btn-ready');
   if (readyBtn) {
+    readyBtn.classList.toggle('hidden', isCampaign);
     readyBtn.textContent = iAmReady ? '○ Non pronto' : '✓ Sono pronto!';
     readyBtn.classList.toggle('btn-primary', !iAmReady);
     readyBtn.classList.toggle('btn-outline', iAmReady);
   }
 
   $('host-controls').classList.toggle('hidden', !isHost);
-  // Non-host: show waiting spinner only AFTER they've pressed ready
-  $('waiting-msg').classList.toggle('hidden', isHost || !iAmReady);
+  $('waiting-msg').classList.toggle('hidden', isHost || isCampaign || !iAmReady);
 
   if (isHost) {
-    const canStart = room.players.length >= 2 && allReady;
+    const canStart = isCampaign ? true : (room.players.length >= 2 && allReady);
     $('btn-start-game').disabled = !canStart;
-    $('start-hint').textContent  = room.players.length < 2
-      ? `Servono almeno 2 giocatori (${room.players.length}/2)`
-      : allReady
-        ? 'Tutti pronti! Dai il via alla battaglia.'
-        : 'In attesa che tutti i giocatori siano pronti…';
+    $('btn-start-game').textContent = isCampaign ? 'Inizia Campagna' : 'Inizia la Partita';
+    $('start-hint').textContent  = isCampaign
+      ? 'Modalità Campagna — puoi iniziare da solo.'
+      : room.players.length < 2
+        ? `Servono almeno 2 giocatori (${room.players.length}/2)`
+        : allReady
+          ? 'Tutti pronti! Dai il via alla battaglia.'
+          : 'In attesa che tutti i giocatori siano pronti…';
 
     $('btn-debug-game').classList.toggle('hidden', !(isAdmin && room.players.length < 2));
+  }
+
+  // Session restore block — campaign + has saved session
+  const restoreBlock = $('session-restore-block');
+  if (restoreBlock) {
+    const canRestore = isCampaign && isHost && !!room.hasSavedSession;
+    restoreBlock.classList.toggle('hidden', !canRestore);
+    if (canRestore && room.savedSessionInfo) {
+      const dt  = room.savedSessionInfo.savedAt
+        ? new Date(room.savedSessionInfo.savedAt).toLocaleString('it-IT')
+        : '—';
+      const rn  = room.savedSessionInfo.roomName ?? '';
+      $('session-restore-info').textContent = `"${rn}" — salvata il ${dt}`;
+    }
   }
 }
 
@@ -97,6 +115,7 @@ function initCopyCode() {
 function initStartButton() {
   $('btn-start-game').addEventListener('click', startGame);
   $('btn-debug-game').addEventListener('click', startDebugGame);
+  $('btn-restore-session')?.addEventListener('click', restoreSession);
 }
 
 function initReadyButton() {
@@ -110,9 +129,8 @@ function initSocketListeners() {
   on('socket:room_created', room => { renderRoom(room); showScreen('room'); });
   on('socket:room_joined',  room => { renderRoom(room); showScreen('room'); });
   on('socket:room_updated', room => {
-    if (document.getElementById('screen-room').classList.contains('active')) {
-      renderRoom(room);
-    }
+    const screen = document.getElementById('screen-room');
+    if (screen?.classList.contains('active')) renderRoom(room);
   });
   on('socket:room_left', () => enterLobby());
   on('socket:error',     msg => showToast(msg, true));

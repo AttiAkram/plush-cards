@@ -164,3 +164,23 @@
   color:          var(--c-sub);
   font-size:      13px;
 }
+
+/* ── Session restore block (campaign) ─────────── */
+.session-restore-block {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            8px;
+  padding:        14px 16px;
+  background:     rgba(99,102,241,0.06);
+  border:         1.5px solid rgba(99,102,241,0.25);
+  border-radius:  var(--radius);
+  margin:         4px 0;
+}
+.session-restore-block.hidden { display: none; }
+
+.session-restore-info {
+  font-size:  12px;
+  color:      var(--c-sub);
+  text-align: center;
+}

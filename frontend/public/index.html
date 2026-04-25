@@ -247,6 +247,15 @@
       <button class="btn btn-primary btn-large btn-bounce" id="btn-ready">✓ Sono pronto!</button>
     </div>
 
+    <!-- Session restore block — campaign only, shown when saved session exists -->
+    <div id="session-restore-block" class="session-restore-block hidden">
+      <div class="session-restore-info" id="session-restore-info">Sessione precedente trovata</div>
+      <button class="btn btn-outline btn-bounce" id="btn-restore-session">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Riprendi Sessione
+      </button>
+    </div>
+
     <div id="waiting-msg" class="waiting-msg hidden">
       <div class="spinner"></div>
       <p>Pronti! In attesa che l'host avvii la partita…</p>
@@ -456,6 +465,18 @@
     <!-- Campaign mode badge -->
     <div class="campaign-badge hidden" id="campaign-badge">Campagna</div>
 
+    <!-- GM toolbar (campaign mode only) -->
+    <div id="gm-toolbar" class="gm-toolbar hidden">
+      <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-gm-deck">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
+        Mazzo
+      </button>
+      <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-save-session">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salva
+      </button>
+    </div>
+
     <!-- End Turn (floating, bottom-right) -->
     <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
 
@@ -622,6 +643,28 @@
     <div id="game-log-entries" class="game-log-entries">
       <p class="game-log-empty">Nessun evento ancora.</p>
     </div>
+    <!-- GM log tools (campaign mode only) -->
+    <div id="gm-log-tools" class="gm-log-tools hidden">
+      <div class="gm-log-input-row">
+        <input id="gm-note-input" type="text" class="gm-note-input" placeholder="Aggiungi nota GM…" maxlength="200">
+        <button class="btn btn-sm btn-primary" id="btn-gm-note">Nota</button>
+      </div>
+      <button class="btn btn-sm btn-outline" id="btn-gm-chapter">+ Nuovo Capitolo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ GM DECK PANEL ══════════════════ -->
+<div id="gm-deck-panel" class="gm-deck-panel hidden" role="dialog" aria-modal="true">
+  <div class="gm-deck-overlay" id="gm-deck-overlay"></div>
+  <div class="gm-deck-box">
+    <div class="gm-deck-header">
+      <span>Mazzo — <span id="gm-deck-count">0</span> carte</span>
+      <button class="gm-deck-close" id="gm-deck-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="gm-deck-list" id="gm-deck-list">
+      <p class="gm-deck-empty">Caricamento…</p>
+    </div>
   </div>
 </div>
 
@@ -736,6 +779,9 @@
         <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="atk" data-delta="-1">−1</button>
         <span class="mt-stat-val" id="mt-atk-val">—</span>
         <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="atk" data-delta="1">+1</button>
+      </div>
+      <div class="mt-stat-row mt-marker-row" id="mt-marker-row">
+        <!-- Populated dynamically per color -->
       </div>
       <div class="mt-move-label">Sposta in</div>
       <div class="mt-move-row" id="mt-move-row">

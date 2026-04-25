@@ -53,9 +53,18 @@ export function createCardEl(card) {
   const displayHp = card.currentHp !== undefined ? card.currentHp : card.hp;
   const hpDamaged = card.currentHp !== undefined && card.currentHp < card.hp;
 
+  // Build marker dots if any markers are set
+  const markerHtml = card.markers
+    ? Object.entries(card.markers)
+        .filter(([, n]) => n > 0)
+        .map(([c, n]) => `<span class="card-marker card-marker-${c}">${n}</span>`)
+        .join('')
+    : '';
+
   div.innerHTML = `
     <div class="card-image-area">
       <div class="creature-art">${creatureArtHtml(card.id)}</div>
+      ${markerHtml ? `<div class="card-markers">${markerHtml}</div>` : ''}
     </div>
     <div class="card-name">${escHtml(card.name)}</div>
     <div class="card-description">${escHtml(card.description)}</div>

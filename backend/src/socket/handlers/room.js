@@ -1,7 +1,8 @@
 'use strict';
 
-const Room  = require('../../models/Room');
-const store = require('../../store');
+const Room     = require('../../models/Room');
+const store    = require('../../store');
+const sessions = require('../../game/sessions');
 
 /**
  * Remove a player from their current room.
@@ -45,14 +46,25 @@ function registerRoomHandlers(io, socket) {
 
   // ── create_room ─────────────────────────────────────────────────────────────
   socket.on('create_room', ({ roomName, mode } = {}) => {
-    const user = store.users.get(username?.toLowerCase());
+    const user    = store.users.get(username?.toLowerCase());
     const isAdmin = user?.role === 'root' || user?.role === 'admin';
     const roomMode = (mode === 'campaign' && isAdmin) ? 'campaign' : 'rules';
     const room = new Room(roomName, username, roomMode);
+
+    // If a campaign session was previously saved for this GM, mark it
+    if (roomMode === 'campaign' && sessions.hasSession(username)) {
+      const saved = sessions.loadSession(username);
+      room.hasSavedSession = true;
+      room._savedSessionInfo = { savedAt: saved?.savedAt, roomName: saved?.roomName };
+    }
+
     store.rooms.set(room.code, room);
     store.sockets.set(socket.id, { username, roomCode: room.code });
     socket.join(room.code);
-    socket.emit('room_created', room.toJSON());
+
+    const roomJson = room.toJSON();
+    if (room.hasSavedSession) roomJson.savedSessionInfo = room._savedSessionInfo;
+    socket.emit('room_created', roomJson);
   });
 
   // ── join_room ────────────────────────────────────────────────────────────────

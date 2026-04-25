@@ -16,7 +16,8 @@ import { on }                                     from '../events/emitter.js';
 import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard,
-         manualEdit }                             from '../socket/client.js';
+         manualEdit, sendGmNote, requestDeck,
+         saveSession, restoreSession }            from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -218,7 +219,12 @@ function renderLog() {
   container.scrollTop = container.scrollHeight;
 }
 
-function openLog()  { $('game-log-panel').classList.remove('hidden'); renderLog(); }
+function openLog() {
+  $('game-log-panel').classList.remove('hidden');
+  renderLog();
+  const gs = getState().gameState;
+  $('gm-log-tools')?.classList.toggle('hidden', gs?.mode !== 'campaign');
+}
 function closeLog() { $('game-log-panel').classList.add('hidden'); }
 
 // ── Tap-select mode helpers ───────────────────────────────────────────────────
@@ -690,6 +696,28 @@ function _renderMasterTools(card, gameState, me) {
   $('mt-hp-val').textContent  = card.currentHp ?? card.hp;
   $('mt-atk-val').textContent = card.damage ?? 0;
 
+  // Markers row
+  const markerRow = $('mt-marker-row');
+  if (markerRow) {
+    markerRow.innerHTML = '';
+    const MARKER_COLORS = [
+      ['green',  '🟢'],
+      ['red',    '🔴'],
+      ['blue',   '🔵'],
+      ['yellow', '🟡'],
+    ];
+    for (const [color, icon] of MARKER_COLORS) {
+      const count = card.markers?.[color] ?? 0;
+      const cell  = el('span', 'mt-marker-cell');
+      cell.innerHTML = `
+        <button class="btn btn-xs btn-outline mt-mk-btn" data-color="${color}" data-delta="-1">−</button>
+        <span class="mt-marker-icon" title="${color}">${icon}</span>
+        <span class="mt-mk-val" id="mt-mk-${color}">${count}</span>
+        <button class="btn btn-xs btn-outline mt-mk-btn" data-color="${color}" data-delta="1">+</button>`;
+      markerRow.appendChild(cell);
+    }
+  }
+
   // Build zone-move buttons
   const moveRow = $('mt-move-row');
   moveRow.innerHTML = '';
@@ -1044,9 +1072,12 @@ export function renderGameBoard(gameState) {
   renderField(myState.field, 'player-field');
   renderArtifactSlot(myState.artifactSlot, 'player-artifact-slot');
 
-  // Debug / campaign badges
+  // Debug / campaign badges + GM toolbar
   $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
   $('campaign-badge').classList.toggle('hidden', gameState.mode !== 'campaign');
+  const isCampaignBoard = gameState.mode === 'campaign';
+  const gmToolbar = $('gm-toolbar');
+  if (gmToolbar) gmToolbar.classList.toggle('hidden', !isCampaignBoard);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1107,10 +1138,64 @@ function initGameActions() {
     closeCardModal();
   });
 
+  // Master Tools: marker buttons (delegated — container built dynamically)
+  $('master-tools').addEventListener('click', e => {
+    const btn = e.target.closest('.mt-mk-btn');
+    if (!btn || !_currentModalCard) return;
+    const color = btn.dataset.color;
+    const delta = parseInt(btn.dataset.delta, 10);
+    manualEdit({ type: 'marker', cardUid: _currentModalCard.uid, color, delta });
+  });
+
+  // GM toolbar buttons
+  const deckBtn    = $('btn-gm-deck');
+  const saveBtn    = $('btn-save-session');
+  if (deckBtn)  deckBtn.addEventListener('click',  () => requestDeck());
+  if (saveBtn)  saveBtn.addEventListener('click',  () => {
+    saveSession(_logEntries);
+    showToast('Sessione salvata!');
+  });
+
   // Log panel
   $('btn-toggle-log').addEventListener('click', openLog);
   $('game-log-close').addEventListener('click', closeLog);
   $('game-log-overlay').addEventListener('click', closeLog);
+
+  // GM Note / Chapter buttons inside log panel
+  const gmNoteBtn    = $('btn-gm-note');
+  const gmChapterBtn = $('btn-gm-chapter');
+  const gmNoteInput  = $('gm-note-input');
+  if (gmNoteBtn) {
+    gmNoteBtn.addEventListener('click', () => {
+      const text = gmNoteInput?.value.trim();
+      if (!text) return;
+      sendGmNote(text, 'note');
+      gmNoteInput.value = '';
+    });
+    gmNoteInput?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { gmNoteBtn.click(); e.preventDefault(); }
+    });
+  }
+  if (gmChapterBtn) {
+    gmChapterBtn.addEventListener('click', () => {
+      const title = prompt('Titolo capitolo:');
+      if (title?.trim()) sendGmNote(title.trim(), 'chapter');
+    });
+  }
+
+  // GM deck panel
+  const deckPanel = $('gm-deck-panel');
+  if (deckPanel) {
+    $('gm-deck-close')?.addEventListener('click',   () => deckPanel.classList.add('hidden'));
+    $('gm-deck-overlay')?.addEventListener('click', () => deckPanel.classList.add('hidden'));
+    $('gm-deck-list')?.addEventListener('click', e => {
+      const btn = e.target.closest('.gm-deck-give-btn');
+      if (!btn) return;
+      const { uid, toUser } = btn.dataset;
+      manualEdit({ type: 'move', cardUid: uid, to: 'hand', toUsername: toUser });
+      deckPanel.classList.add('hidden');
+    });
+  }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -1309,6 +1394,62 @@ function initSocketListeners() {
     addToLog(msg, 'system');
     showToast(msg, who === me);
     if (gs) { renderPlayersBar(gs); renderOpponentsArea(gs); }
+  });
+
+  on('socket:gm_note', ({ username: who, text, type }) => {
+    if (type === 'chapter') {
+      addToLog(`══ ${text} ══`, 'chapter');
+    } else {
+      addToLog(`[GM ${who}] ${text}`, 'gm');
+    }
+    // Show GM log tools for campaign mode
+    const gs = getState().gameState;
+    if (gs?.mode === 'campaign') {
+      $('gm-log-tools')?.classList.remove('hidden');
+      openLog();
+    }
+  });
+
+  on('socket:deck_contents', ({ deck }) => {
+    const gs      = getState().gameState;
+    const players = gs ? Object.keys(gs.players) : [];
+    const panel   = $('gm-deck-panel');
+    const list    = $('gm-deck-list');
+    if (!panel || !list) return;
+
+    $('gm-deck-count').textContent = deck.length;
+    list.innerHTML = deck.length
+      ? deck.map(card => `
+        <div class="gm-deck-item">
+          <span class="gm-deck-name">${escHtml(card.name)}</span>
+          <span class="gm-deck-rarity rarity-${card.rarity}">${card.rarity}</span>
+          <div class="gm-deck-actions">
+            ${players.map(u => `<button class="btn btn-xs btn-outline gm-deck-give-btn"
+              data-uid="${card.uid}" data-to-user="${escHtml(u)}">→ ${escHtml(u)}</button>`).join('')}
+          </div>
+        </div>`).join('')
+      : '<p class="gm-deck-empty">Mazzo vuoto.</p>';
+
+    panel.classList.remove('hidden');
+  });
+
+  on('socket:session_saved', ({ savedAt }) => {
+    const d = new Date(savedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    showToast(`Sessione salvata alle ${d}`);
+    addToLog(`[Sessione salvata alle ${d}]`, 'system');
+  });
+
+  on('socket:session_restored', ({ gameState, logEntries, savedAt }) => {
+    if (!gameState) return;
+    // Restore log
+    _logEntries.length = 0;
+    for (const e of (logEntries ?? [])) _logEntries.push(e);
+    const d = new Date(savedAt).toLocaleDateString('it-IT');
+    addToLog(`[Sessione del ${d} ripristinata]`, 'system');
+    // Render board
+    renderGameBoard(gameState);
+    showScreen('game');
+    showTurnBanner(`Sessione ripristinata — turno di ${gameState.currentTurn}`);
   });
 
   on('socket:game_over', ({ winner }) => {
