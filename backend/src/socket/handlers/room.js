@@ -44,8 +44,11 @@ function registerRoomHandlers(io, socket) {
   const { username } = socket;
 
   // ── create_room ─────────────────────────────────────────────────────────────
-  socket.on('create_room', ({ roomName } = {}) => {
-    const room = new Room(roomName, username);
+  socket.on('create_room', ({ roomName, mode } = {}) => {
+    const user = store.users.get(username?.toLowerCase());
+    const isAdmin = user?.role === 'root' || user?.role === 'admin';
+    const roomMode = (mode === 'campaign' && isAdmin) ? 'campaign' : 'rules';
+    const room = new Room(roomName, username, roomMode);
     store.rooms.set(room.code, room);
     store.sockets.set(socket.id, { username, roomCode: room.code });
     socket.join(room.code);

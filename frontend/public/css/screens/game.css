@@ -642,6 +642,23 @@
 }
 .debug-badge.hidden { display: none !important; }
 
+/* ── Campaign mode badge ──────────────────────── */
+.campaign-badge {
+  position:    absolute;
+  top:         10px;
+  left:        76px;
+  z-index:     10;
+  padding:     4px 10px;
+  background:  rgba(99, 102, 241, 0.9);
+  color:       #fff;
+  border-radius: var(--radius-pill);
+  font-size:   10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.campaign-badge.hidden { display: none !important; }
+
 /* ── Floating End Turn button ────────────────── */
 .btn-end-turn {
   position:     absolute;
@@ -1176,4 +1193,77 @@
   color:       var(--c-sub);
   line-height: 1.4;
   max-width:   260px;
+}
+
+/* ── Master Tools (campaign card modal) ──────── */
+.master-tools {
+  border-top:     1.5px solid var(--c-border);
+  margin-top:     10px;
+  padding-top:    10px;
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+}
+.master-tools.hidden { display: none; }
+
+.mt-divider {
+  font-size:      10px;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          rgba(99,102,241,0.9);
+}
+
+.mt-stat-row {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+}
+
+.mt-label {
+  font-size:   11px;
+  font-weight: 700;
+  color:       var(--c-sub);
+  min-width:   28px;
+}
+
+.mt-stat-val {
+  min-width:   30px;
+  text-align:  center;
+  font-size:   15px;
+  font-weight: 700;
+  color:       var(--c-text);
+}
+
+.mt-move-label {
+  font-size:  11px;
+  font-weight: 600;
+  color:      var(--c-sub);
+  margin-top: 2px;
+}
+
+.mt-move-row {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       5px;
+}
+
+.mt-move-btn {
+  font-size: 11px;
+  padding:   3px 8px;
+}
+
+/* ── Create-room mode toggle ─────────────────── */
+.create-mode-row { margin-top: 2px; }
+.create-mode-label {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  font-size:   13px;
+  cursor:      pointer;
+  user-select: none;
+}
+.create-mode-hint {
+  font-size: 11px;
+  color:     var(--c-sub);
 }

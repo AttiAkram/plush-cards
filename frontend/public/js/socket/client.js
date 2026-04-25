@@ -65,13 +65,17 @@ export function connectSocket() {
   socket.on('player_status_changed', data => busEmit('socket:player_status_changed', data));
   socket.on('player_eliminated',     data => busEmit('socket:player_eliminated',     data));
   socket.on('game_over',             data => busEmit('socket:game_over',             data));
+  socket.on('manual_edit_applied',   data => busEmit('socket:manual_edit_applied',   data));
 }
 
 // ── Room actions ──────────────────────────────────────────────────────────────
 
-/** @param {string} roomName */
-export function createRoom(roomName) {
-  getSocket()?.emit('create_room', { roomName });
+/**
+ * @param {string} roomName
+ * @param {'rules'|'campaign'} [mode]
+ */
+export function createRoom(roomName, mode = 'rules') {
+  getSocket()?.emit('create_room', { roomName, mode });
 }
 
 /** @param {string} roomCode */
@@ -140,4 +144,12 @@ export function toggleReady() {
 /** @param {string|null} artifactUid */
 export function pickArtifact(artifactUid) {
   getSocket()?.emit('pick_artifact', { artifactUid });
+}
+
+/**
+ * Campaign-mode manual edit.
+ * @param {object} payload — { type, cardUid, stat?, delta?, to?, toUsername?, slotIndex? }
+ */
+export function manualEdit(payload) {
+  getSocket()?.emit('manual_edit', payload);
 }

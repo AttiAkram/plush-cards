@@ -21,14 +21,15 @@ class Room {
    * @param {string} name
    * @param {string} hostUsername
    */
-  constructor(name, hostUsername) {
+  constructor(name, hostUsername, mode = 'rules') {
     this.id         = uuidv4();
     this.code       = generateCode();
     this.name       = name?.trim() || `Stanza di ${hostUsername}`;
     this.host       = hostUsername;
+    this.mode          = mode === 'campaign' ? 'campaign' : 'rules';
     this.players       = [{ username: hostUsername }];
     this.ready         = { [hostUsername]: false };
-    this.status        = 'waiting';   // 'waiting' | 'drafting' | 'playing'
+    this.status        = 'waiting';   // 'waiting' | 'drafting' | 'playing' | 'finished'
     this.maxPlayers    = ROOM_MAX_PLAYERS;
     this.gameState     = null;
     this.draftChoices  = {};          // { [username]: CardDef[] } — 3 options per player
@@ -85,6 +86,7 @@ class Room {
       code:       this.code,
       name:       this.name,
       host:       this.host,
+      mode:       this.mode,
       players:    this.players,
       ready:      { ...this.ready },
       status:     this.status,

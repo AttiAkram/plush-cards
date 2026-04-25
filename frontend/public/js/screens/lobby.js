@@ -37,8 +37,11 @@ function renderRoomList(rooms) {
   for (const room of rooms) {
     const card = el('div', 'room-card');
 
+    const modeBadge = room.mode === 'campaign'
+      ? '<span class="room-mode-badge">Campagna</span>'
+      : '';
     card.innerHTML = `
-      <div class="room-card-name">${escHtml(room.name)}</div>
+      <div class="room-card-name">${escHtml(room.name)}${modeBadge}</div>
       <div class="room-card-meta">Host: ${escHtml(room.host)}</div>
       <div class="room-card-slots">
         ${Array.from({ length: 4 }, (_, i) =>
@@ -55,6 +58,10 @@ function renderRoomList(rooms) {
 // ── Create room modal ──────────────────────────────────────────────────────────
 
 function openCreateModal() {
+  const { role } = getState();
+  const isAdmin  = role === 'root' || role === 'admin';
+  $('create-mode-row').classList.toggle('hidden', !isAdmin);
+  $('create-mode-campaign').checked = false;
   $('modal-create').classList.remove('hidden');
   $('room-name-input').focus();
 }
@@ -68,9 +75,10 @@ function initCreateModal() {
 
   $('btn-confirm-create').addEventListener('click', () => {
     const name = $('room-name-input').value.trim() || `Stanza di ${getState().username}`;
+    const mode = $('create-mode-campaign').checked ? 'campaign' : 'rules';
     $('room-name-input').value = '';
     closeCreateModal();
-    createRoom(name);
+    createRoom(name, mode);
   });
 }
 

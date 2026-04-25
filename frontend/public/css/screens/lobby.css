@@ -158,3 +158,16 @@
 .rooms-empty p         { font-size: 13px; color: var(--c-sub); font-weight: 500; }
 .rooms-empty-sub,
 .empty-sub             { font-size: 12px; color: var(--c-sub); }
+
+
+.room-mode-badge {
+  display:       inline-block;
+  margin-left:   8px;
+  padding:       1px 6px;
+  border-radius: 4px;
+  font-size:     10px;
+  font-weight:   700;
+  background:    rgba(99,102,241,0.15);
+  color:         rgb(99,102,241);
+  vertical-align: middle;
+}

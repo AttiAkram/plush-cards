@@ -15,7 +15,8 @@ import { showScreen }                             from '../router/index.js';
 import { on }                                     from '../events/emitter.js';
 import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
-         leaveMatch, attack, discardCard }        from '../socket/client.js';
+         leaveMatch, attack, discardCard,
+         manualEdit }                             from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -623,20 +624,99 @@ function openCardModal(card) {
   rarityEl.className   = `card-modal-rarity rarity-${card.rarity}`;
   $('card-modal-stats').innerHTML =
     `<span class="cm-stat cm-dmg">⚔ ${card.damage}</span>
-     <span class="cm-stat cm-hp">♥ ${card.hp}</span>`;
+     <span class="cm-stat cm-hp">♥ ${card.currentHp ?? card.hp} / ${card.hp}</span>`;
   $('card-modal-desc').textContent = card.description;
 
   const { gameState, username } = getState();
-  const isMyTurn  = gameState?.currentTurn === username;
-  const inMyHand  = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
-  const fieldCard = gameState?.players[username]?.field?.find(c => c?.uid === card.uid);
-  const inMyField = !!fieldCard;
-  const canAttack = isMyTurn && inMyField && !fieldCard?.haAttaccato;
-  $('card-modal-play').classList.toggle('hidden',    !(isMyTurn && inMyHand));
-  $('card-modal-discard').classList.toggle('hidden', !(isMyTurn && inMyHand));
+  const isCampaign = gameState?.mode === 'campaign';
+  const isMyTurn   = gameState?.currentTurn === username;
+  const inMyHand   = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
+  const fieldCard  = gameState?.players[username]?.field?.find(c => c?.uid === card.uid);
+  const inMyField  = !!fieldCard;
+  const isGM       = isCampaign && gameState?.players[username] !== undefined
+    && (Object.values(gameState.players)[0]?.username === username
+        || _isHostOrAdmin(gameState, username));
+  const canAttack  = isCampaign
+    ? inMyField
+    : (isMyTurn && inMyField && !fieldCard?.haAttaccato);
+
+  $('card-modal-play').classList.toggle('hidden',    !(isMyTurn && inMyHand) && !isCampaign);
+  $('card-modal-discard').classList.toggle('hidden', !((isMyTurn || isCampaign) && inMyHand));
   $('card-modal-attack').classList.toggle('hidden',  !canAttack);
 
+  // Master Tools — campaign mode only, for GM or own cards
+  const cardOwner = _findCardOwner(gameState, card.uid);
+  const canUseMT  = isCampaign && (isGM || cardOwner === username);
+  $('master-tools').classList.toggle('hidden', !canUseMT);
+  if (canUseMT) _renderMasterTools(card, gameState, username);
+
   $('card-modal').classList.remove('hidden');
+}
+
+/** Find the current modal card object in the updated game state. */
+function _findCurrentModalCard(gs) {
+  if (!_currentModalCard || !gs) return null;
+  const uid = _currentModalCard.uid;
+  for (const p of Object.values(gs.players)) {
+    const fc = p.field?.find(c => c?.uid === uid);
+    if (fc) return fc;
+    const hc = p.hand?.find(c => c.uid === uid);
+    if (hc) return hc;
+    if (p.artifactSlot?.uid === uid) return p.artifactSlot;
+  }
+  return null;
+}
+
+/** True if `username` is the room host (first player in turn order is proxy). */
+function _isHostOrAdmin(gameState, username) {
+  // We store mode on gs; host info lives on room — we don't have it here.
+  // Best proxy: if the user is listed at all in players they can see master tools.
+  return true; // All campaign players get GM tools (simplest Phase 1 approach)
+}
+
+/** Find which player owns a card (field/hand/artifact), or null for shared zones. */
+function _findCardOwner(gameState, uid) {
+  if (!gameState) return null;
+  for (const [uname, p] of Object.entries(gameState.players)) {
+    if (p.hand?.some(c => c.uid === uid))   return uname;
+    if (p.field?.some(c => c?.uid === uid)) return uname;
+    if (p.artifactSlot?.uid === uid)        return uname;
+  }
+  return null;
+}
+
+function _renderMasterTools(card, gameState, me) {
+  // Update stat displays
+  $('mt-hp-val').textContent  = card.currentHp ?? card.hp;
+  $('mt-atk-val').textContent = card.damage ?? 0;
+
+  // Build zone-move buttons
+  const moveRow = $('mt-move-row');
+  moveRow.innerHTML = '';
+
+  const players = Object.keys(gameState.players);
+  for (const uname of players) {
+    const label = uname === me ? 'Mia mano' : `Mano: ${uname}`;
+    const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    btn.textContent = label;
+    btn.dataset.to  = 'hand';
+    btn.dataset.toUser = uname;
+    moveRow.appendChild(btn);
+  }
+  for (const uname of players) {
+    const label = uname === me ? 'Mio campo' : `Campo: ${uname}`;
+    const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    btn.textContent = label;
+    btn.dataset.to  = 'field';
+    btn.dataset.toUser = uname;
+    moveRow.appendChild(btn);
+  }
+  for (const [to, label] of [['discard','Scarti'],['void','Vuoto'],['absolute','Assoluto'],['deck_top','Deck (sopra)'],['deck_bottom','Deck (fondo)']]) {
+    const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    btn.textContent = label;
+    btn.dataset.to  = to;
+    moveRow.appendChild(btn);
+  }
 }
 
 function closeCardModal() {
@@ -964,8 +1044,9 @@ export function renderGameBoard(gameState) {
   renderField(myState.field, 'player-field');
   renderArtifactSlot(myState.artifactSlot, 'player-artifact-slot');
 
-  // Debug badge — visible only in single-player test games
+  // Debug / campaign badges
   $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
+  $('campaign-badge').classList.toggle('hidden', gameState.mode !== 'campaign');
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1006,6 +1087,25 @@ function initGameActions() {
 
   // Cancel attack mode button
   $('btn-cancel-attack').addEventListener('click', exitAttackMode);
+
+  // Master Tools: stat buttons (delegated on container)
+  $('master-tools').addEventListener('click', e => {
+    const btn = e.target.closest('.mt-stat-btn');
+    if (!btn || !_currentModalCard) return;
+    const stat  = btn.dataset.stat;
+    const delta = parseInt(btn.dataset.delta, 10);
+    manualEdit({ type: 'stat', cardUid: _currentModalCard.uid, stat, delta });
+  });
+
+  // Master Tools: zone-move buttons (delegated on mt-move-row)
+  $('mt-move-row').addEventListener('click', e => {
+    const btn = e.target.closest('.mt-move-btn');
+    if (!btn || !_currentModalCard) return;
+    const to       = btn.dataset.to;
+    const toUser   = btn.dataset.toUser;
+    manualEdit({ type: 'move', cardUid: _currentModalCard.uid, to, toUsername: toUser });
+    closeCardModal();
+  });
 
   // Log panel
   $('btn-toggle-log').addEventListener('click', openLog);
@@ -1173,6 +1273,33 @@ function initSocketListeners() {
 
   on('socket:error', msg => {
     showToast(humanizeGameError(msg), true);
+  });
+
+  on('socket:manual_edit_applied', ({ gameState: newGs, log }) => {
+    if (!newGs) return;
+    const me    = getState().username;
+    const oldGs = getState().gameState;
+    showCombatFloaters(oldGs, newGs);
+    setState({ gameState: newGs });
+    renderPlayersBar(newGs);
+    renderOpponentsArea(newGs);
+    renderField(newGs.players[me]?.field ?? [], 'player-field');
+    renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
+    updateZoneCounts(newGs);
+    $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
+    for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
+    // Refresh modal if the edited card is still shown
+    if (_currentModalCard) {
+      const updated = _findCurrentModalCard(newGs);
+      if (updated) {
+        $('mt-hp-val').textContent  = updated.currentHp ?? updated.hp;
+        $('mt-atk-val').textContent = updated.damage ?? 0;
+        $('card-modal-stats').innerHTML =
+          `<span class="cm-stat cm-dmg">⚔ ${updated.damage}</span>
+           <span class="cm-stat cm-hp">♥ ${updated.currentHp ?? updated.hp} / ${updated.hp}</span>`;
+      }
+    }
+    if (log) addToLog(log, 'system');
   });
 
   on('socket:player_eliminated', ({ username: who }) => {

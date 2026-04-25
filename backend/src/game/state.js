@@ -48,6 +48,7 @@ function initGameState(room, chosenArtifacts = {}) {
     currentTurn: turnOrder[0],
     turnNumber:  1,
     phase:       'main',
+    mode:        room.mode,        // 'rules' | 'campaign'
     deck:        personaggiDeck,   // server-only — stripped in sanitiseGs
     discard:     [],               // global discard pile; each card has `owner` field
     zones: {

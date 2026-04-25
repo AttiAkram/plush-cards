@@ -77,6 +77,43 @@ function _finalizeDraft(io, room, roomCode) {
 }
 
 /**
+ * Find a card anywhere in the game state (field, hand, artifact, discard, zones, deck).
+ * Returns { card, owner, zone, slotIndex? } or null.
+ */
+function _findCardEverywhere(gs, uid) {
+  for (const [uname, p] of Object.entries(gs.players)) {
+    const fi = p.field.findIndex(c => c?.uid === uid);
+    if (fi !== -1) return { card: p.field[fi], owner: uname, zone: 'field', slotIndex: fi };
+    const hi = p.hand.findIndex(c => c.uid === uid);
+    if (hi !== -1) return { card: p.hand[hi], owner: uname, zone: 'hand', handIdx: hi };
+    if (p.artifactSlot?.uid === uid) return { card: p.artifactSlot, owner: uname, zone: 'artifact' };
+  }
+  const di = gs.discard.findIndex(c => c.uid === uid);
+  if (di !== -1) return { card: gs.discard[di], owner: gs.discard[di].owner, zone: 'discard', idx: di };
+  const vi = gs.zones.void.findIndex(c => c.uid === uid);
+  if (vi !== -1) return { card: gs.zones.void[vi], owner: null, zone: 'void', idx: vi };
+  const ai = gs.zones.absolute.findIndex(c => c.uid === uid);
+  if (ai !== -1) return { card: gs.zones.absolute[ai], owner: null, zone: 'absolute', idx: ai };
+  const ki = gs.deck.findIndex(c => c.uid === uid);
+  if (ki !== -1) return { card: gs.deck[ki], owner: null, zone: 'deck', idx: ki };
+  return null;
+}
+
+/**
+ * Remove a card from wherever it currently lives, mutating gs.
+ */
+function _removeCardFromZone(gs, found) {
+  const { owner, zone, slotIndex, handIdx, idx } = found;
+  if (zone === 'field')    gs.players[owner].field[slotIndex]        = null;
+  if (zone === 'hand')     gs.players[owner].hand.splice(handIdx, 1);
+  if (zone === 'artifact') gs.players[owner].artifactSlot            = null;
+  if (zone === 'discard')  gs.discard.splice(idx, 1);
+  if (zone === 'void')     gs.zones.void.splice(idx, 1);
+  if (zone === 'absolute') gs.zones.absolute.splice(idx, 1);
+  if (zone === 'deck')     gs.deck.splice(idx, 1);
+}
+
+/**
  * Register game-related socket event handlers for one connection.
  *
  * @param {import('socket.io').Server} io
@@ -95,7 +132,7 @@ function registerGameHandlers(io, socket) {
   }
 
   // ── start_game ───────────────────────────────────────────────────────────────
-  // Kicks off the artifact draft phase (or skips to game in debug mode).
+  // Kicks off the artifact draft phase (or skips to game in debug/campaign mode).
 
   socket.on('start_game', ({ debug = false } = {}) => {
     const { room, roomCode } = getRoomAndState();
@@ -105,6 +142,13 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Solo il host può iniziare la partita');
 
     const debugAllowed = debug && isAdminUser(username);
+
+    // Campaign mode: skip all checks, no draft, random artifact assignment
+    if (room.mode === 'campaign') {
+      room.status    = 'playing';
+      room.gameState = initGameState(room, {});
+      return io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
+    }
 
     if (room.players.length < 2 && !debugAllowed)
       return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
@@ -248,7 +292,9 @@ function registerGameHandlers(io, socket) {
     const { room, roomCode, gs } = getRoomAndState();
     if (!gs) return;
 
-    if (gs.currentTurn !== username)
+    const isCampaign = room.mode === 'campaign';
+
+    if (!isCampaign && gs.currentTurn !== username)
       return socket.emit('error_msg', 'Non è il tuo turno');
 
     const myState = gs.players[username];
@@ -264,8 +310,8 @@ function registerGameHandlers(io, socket) {
     if (card.type === 'artefatto')
       return socket.emit('error_msg', 'Gli artefatti non possono essere giocati dalla mano');
 
-    // 1-plush-per-turn limit
-    if ((myState.plushPlayedThisTurn ?? 0) >= 1)
+    // 1-plush-per-turn limit (rules mode only)
+    if (!isCampaign && (myState.plushPlayedThisTurn ?? 0) >= 1)
       return socket.emit('error_msg', 'Puoi giocare solo 1 personaggio per turno');
 
     if (slotIndex < 0 || slotIndex >= myState.field.length)
@@ -302,7 +348,9 @@ function registerGameHandlers(io, socket) {
     const { room, roomCode, gs } = getRoomAndState();
     if (!gs) return;
 
-    if (gs.currentTurn !== username)
+    const isCampaign = room.mode === 'campaign';
+
+    if (!isCampaign && gs.currentTurn !== username)
       return socket.emit('error_msg', 'Non è il tuo turno');
 
     const myState    = gs.players[username];
@@ -316,7 +364,7 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Attaccante non trovato sul campo');
     const attacker = myState.field[attackerIdx];
 
-    if (attacker.haAttaccato)
+    if (!isCampaign && attacker.haAttaccato)
       return socket.emit('error_msg', 'Questa carta ha già attaccato questo turno');
 
     // Find target: first check field, then artifactSlot
@@ -426,7 +474,7 @@ function registerGameHandlers(io, socket) {
     const { room, roomCode, gs } = getRoomAndState();
     if (!gs) return;
 
-    if (gs.currentTurn !== username)
+    if (room.mode !== 'campaign' && gs.currentTurn !== username)
       return socket.emit('error_msg', 'Non è il tuo turno');
 
     const myState = gs.players[username];
@@ -470,6 +518,100 @@ function registerGameHandlers(io, socket) {
       .filter(i => i !== -1);
 
     socket.emit('valid_slots', { cardUid, validSlots });
+  });
+
+  // ── manual_edit (campaign mode only) ────────────────────────────────────────
+  //
+  // type 'stat'  — change HP or ATK of any card by delta
+  // type 'move'  — move a card from wherever it is to a target zone
+
+  socket.on('manual_edit', ({ type, cardUid, stat, delta, to, toUsername, slotIndex } = {}) => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!gs || room.mode !== 'campaign')
+      return socket.emit('error_msg', 'Solo in modalità campagna');
+
+    const isGM = room.host === username || isAdminUser(username);
+
+    // Find the card in all zones
+    const found = _findCardEverywhere(gs, cardUid);
+    if (!found) return socket.emit('error_msg', 'Carta non trovata');
+
+    const ownerUsername = found.owner;
+    if (!isGM && ownerUsername !== username)
+      return socket.emit('error_msg', 'Non puoi modificare le carte degli altri');
+
+    const { card } = found;
+    let log = '';
+
+    if (type === 'stat') {
+      const d = Number(delta) || 0;
+      if (stat === 'hp') {
+        card.currentHp = Math.max(0, (card.currentHp ?? card.hp) + d);
+        log = `[GM] ${username} → ${card.name}: HP ${d >= 0 ? '+' : ''}${d} (ora ${card.currentHp})`;
+      } else if (stat === 'atk') {
+        card.damage = Math.max(0, (card.damage ?? 0) + d);
+        log = `[GM] ${username} → ${card.name}: ATK ${d >= 0 ? '+' : ''}${d} (ora ${card.damage})`;
+      }
+    } else if (type === 'move') {
+      const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom'];
+      if (!validTo.includes(to)) return socket.emit('error_msg', 'Destinazione non valida');
+
+      // Remove from current zone
+      _removeCardFromZone(gs, found);
+      const destUser = toUsername ?? ownerUsername ?? username;
+
+      if (to === 'hand') {
+        const targetState = gs.players[destUser];
+        if (!targetState) return socket.emit('error_msg', 'Giocatore non trovato');
+        const clean = { ...card };
+        delete clean.owner;
+        clean.currentHp = clean.hp;  // reset HP on return to hand
+        targetState.hand.push(clean);
+        const sid = findSocketId(destUser);
+        if (sid) io.to(sid).emit('hand_updated', { hand: targetState.hand });
+        log = `[GM] ${username} sposta ${card.name} → mano di ${destUser}`;
+
+      } else if (to === 'field') {
+        const targetState = gs.players[destUser];
+        if (!targetState) return socket.emit('error_msg', 'Giocatore non trovato');
+        const freeSlot = typeof slotIndex === 'number'
+          ? slotIndex
+          : targetState.field.findIndex(s => s === null);
+        if (freeSlot === -1 || targetState.field[freeSlot] !== null)
+          return socket.emit('error_msg', 'Nessuno slot libero in campo');
+        const clean = { ...card };
+        delete clean.owner;
+        clean.currentHp    = clean.currentHp ?? clean.hp;
+        clean.haAttaccato  = false;
+        targetState.field[freeSlot] = clean;
+        log = `[GM] ${username} sposta ${card.name} → campo di ${destUser} (slot ${freeSlot})`;
+
+      } else if (to === 'discard') {
+        gs.discard.push({ ...card, owner: ownerUsername ?? username });
+        log = `[GM] ${username} sposta ${card.name} → Scarti`;
+      } else if (to === 'void') {
+        const clean = { ...card }; delete clean.owner;
+        gs.zones.void.push(clean);
+        log = `[GM] ${username} sposta ${card.name} → Vuoto`;
+      } else if (to === 'absolute') {
+        const clean = { ...card }; delete clean.owner;
+        gs.zones.absolute.push(clean);
+        log = `[GM] ${username} sposta ${card.name} → Assoluto`;
+      } else if (to === 'deck_top') {
+        const clean = { ...card }; delete clean.owner;
+        clean.currentHp = clean.hp;
+        gs.deck.push(clean);  // push = top of stack (pop draws from top)
+        log = `[GM] ${username} rimette ${card.name} in cima al mazzo`;
+      } else if (to === 'deck_bottom') {
+        const clean = { ...card }; delete clean.owner;
+        clean.currentHp = clean.hp;
+        gs.deck.unshift(clean);  // unshift = bottom (pop draws from top)
+        log = `[GM] ${username} rimette ${card.name} in fondo al mazzo`;
+      }
+    }
+
+    const publicGs = sanitiseGs(gs);
+    io.to(roomCode).emit('manual_edit_applied', { gameState: publicGs, log });
   });
 
   // ── leave_match ───────────────────────────────────────────────────────────────

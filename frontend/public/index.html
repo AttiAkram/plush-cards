@@ -169,6 +169,13 @@
         <label>Nome della stanza</label>
         <input id="room-name-input" type="text" placeholder="La mia stanza..." maxlength="30">
       </div>
+      <div class="field-group create-mode-row hidden" id="create-mode-row">
+        <label class="create-mode-label">
+          <input type="checkbox" id="create-mode-campaign">
+          Modalità Campagna
+          <span class="create-mode-hint">Niente turni forzati, GM tools</span>
+        </label>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-outline" id="btn-cancel-create">Annulla</button>
         <button class="btn btn-primary btn-bounce" id="btn-confirm-create">Crea</button>
@@ -446,6 +453,8 @@
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 1 4 4v.5h.5A1.5 1.5 0 0 1 14 7v1a1.5 1.5 0 0 1-1.5 1.5H12v.5a4 4 0 0 1-8 0V10h-.5A1.5 1.5 0 0 1 2 8.5V7a1.5 1.5 0 0 1 1.5-1.5H4V5a4 4 0 0 1 4-4zm0 1a3 3 0 0 0-3 3v1h6V5a3 3 0 0 0-3-3zm0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
       DEBUG
     </div>
+    <!-- Campaign mode badge -->
+    <div class="campaign-badge hidden" id="campaign-badge">Campagna</div>
 
     <!-- End Turn (floating, bottom-right) -->
     <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
@@ -709,6 +718,29 @@
       <button class="btn btn-primary card-modal-play hidden" id="card-modal-play">Gioca</button>
       <button class="btn btn-danger card-modal-attack hidden" id="card-modal-attack">Attacca</button>
       <button class="btn btn-outline card-modal-discard hidden" id="card-modal-discard">Scarta</button>
+    </div>
+
+    <!-- Master Tools: visible in campaign mode for GM / card owner -->
+    <div id="master-tools" class="master-tools hidden">
+      <div class="mt-divider">GM Tools</div>
+      <div class="mt-stat-row">
+        <span class="mt-label">HP</span>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="hp" data-delta="-5">−5</button>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="hp" data-delta="-1">−1</button>
+        <span class="mt-stat-val" id="mt-hp-val">—</span>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="hp" data-delta="1">+1</button>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="hp" data-delta="5">+5</button>
+      </div>
+      <div class="mt-stat-row">
+        <span class="mt-label">ATK</span>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="atk" data-delta="-1">−1</button>
+        <span class="mt-stat-val" id="mt-atk-val">—</span>
+        <button class="btn btn-sm btn-outline mt-stat-btn" data-stat="atk" data-delta="1">+1</button>
+      </div>
+      <div class="mt-move-label">Sposta in</div>
+      <div class="mt-move-row" id="mt-move-row">
+        <!-- Populated dynamically: per-player buttons + zone buttons -->
+      </div>
     </div>
   </div>
 </div>
