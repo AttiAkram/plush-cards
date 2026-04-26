@@ -17,7 +17,7 @@ import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard,
          manualEdit, sendGmNote, requestDeck,
-         saveSession, restoreSession }            from '../socket/client.js';
+         saveSession, restoreSession, gmRandom }  from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -639,9 +639,7 @@ function openCardModal(card) {
   const inMyHand   = gameState?.players[username]?.hand?.some(c => c.uid === card.uid);
   const fieldCard  = gameState?.players[username]?.field?.find(c => c?.uid === card.uid);
   const inMyField  = !!fieldCard;
-  const isGM       = isCampaign && gameState?.players[username] !== undefined
-    && (Object.values(gameState.players)[0]?.username === username
-        || _isHostOrAdmin(gameState, username));
+  const isGM       = isCampaign && _isHostOrAdmin(gameState, username);
   const canAttack  = isCampaign
     ? inMyField
     : (isMyTurn && inMyField && !fieldCard?.haAttaccato);
@@ -673,11 +671,12 @@ function _findCurrentModalCard(gs) {
   return null;
 }
 
-/** True if `username` is the room host (first player in turn order is proxy). */
+/** True if `username` is the room host or has admin/root role. */
 function _isHostOrAdmin(gameState, username) {
-  // We store mode on gs; host info lives on room — we don't have it here.
-  // Best proxy: if the user is listed at all in players they can see master tools.
-  return true; // All campaign players get GM tools (simplest Phase 1 approach)
+  const state = getState();
+  const role  = state.role;
+  if (role === 'root' || role === 'admin') return true;
+  return state.room?.host === username;
 }
 
 /** Find which player owns a card (field/hand/artifact), or null for shared zones. */
@@ -692,7 +691,9 @@ function _findCardOwner(gameState, uid) {
 }
 
 function _renderMasterTools(card, gameState, me) {
-  // Update stat displays
+  const isGM = _isHostOrAdmin(gameState, me);
+
+  // Stat displays
   $('mt-hp-val').textContent  = card.currentHp ?? card.hp;
   $('mt-atk-val').textContent = card.damage ?? 0;
 
@@ -718,26 +719,45 @@ function _renderMasterTools(card, gameState, me) {
     }
   }
 
-  // Build zone-move buttons
+  // Move buttons — admin sees all players + random; others see only own hand/field
   const moveRow = $('mt-move-row');
   moveRow.innerHTML = '';
-
   const players = Object.keys(gameState.players);
-  for (const uname of players) {
-    const label = uname === me ? 'Mia mano' : `Mano: ${uname}`;
-    const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
-    btn.textContent = label;
-    btn.dataset.to  = 'hand';
-    btn.dataset.toUser = uname;
-    moveRow.appendChild(btn);
-  }
-  for (const uname of players) {
-    const label = uname === me ? 'Mio campo' : `Campo: ${uname}`;
-    const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
-    btn.textContent = label;
-    btn.dataset.to  = 'field';
-    btn.dataset.toUser = uname;
-    moveRow.appendChild(btn);
+
+  if (isGM) {
+    for (const uname of players) {
+      const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+      btn.textContent    = uname === me ? 'Mia mano' : `Mano: ${uname}`;
+      btn.dataset.to     = 'hand';
+      btn.dataset.toUser = uname;
+      moveRow.appendChild(btn);
+    }
+    for (const uname of players) {
+      const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+      btn.textContent    = uname === me ? 'Mio campo' : `Campo: ${uname}`;
+      btn.dataset.to     = 'field';
+      btn.dataset.toUser = uname;
+      moveRow.appendChild(btn);
+    }
+    const randHandBtn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    randHandBtn.textContent = '→ Mano casuale';
+    randHandBtn.dataset.to  = 'hand_random';
+    moveRow.appendChild(randHandBtn);
+    const randFieldBtn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    randFieldBtn.textContent = '→ Campo casuale';
+    randFieldBtn.dataset.to  = 'field_random';
+    moveRow.appendChild(randFieldBtn);
+  } else {
+    const myHandBtn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    myHandBtn.textContent    = 'Mia mano';
+    myHandBtn.dataset.to     = 'hand';
+    myHandBtn.dataset.toUser = me;
+    moveRow.appendChild(myHandBtn);
+    const myFieldBtn = el('button', 'btn btn-sm btn-outline mt-move-btn');
+    myFieldBtn.textContent    = 'Mio campo';
+    myFieldBtn.dataset.to     = 'field';
+    myFieldBtn.dataset.toUser = me;
+    moveRow.appendChild(myFieldBtn);
   }
   for (const [to, label] of [['discard','Scarti'],['void','Vuoto'],['absolute','Assoluto'],['deck_top','Deck (sopra)'],['deck_bottom','Deck (fondo)']]) {
     const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
@@ -745,6 +765,10 @@ function _renderMasterTools(card, gameState, me) {
     btn.dataset.to  = to;
     moveRow.appendChild(btn);
   }
+
+  // Admin-only section
+  const adminSection = $('mt-admin-section');
+  if (adminSection) adminSection.classList.toggle('hidden', !isGM);
 }
 
 function closeCardModal() {
@@ -1072,12 +1096,13 @@ export function renderGameBoard(gameState) {
   renderField(myState.field, 'player-field');
   renderArtifactSlot(myState.artifactSlot, 'player-artifact-slot');
 
-  // Debug / campaign badges + GM toolbar
+  // Debug / campaign badges + GM toolbar (toolbar is admin/host only)
   $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
   $('campaign-badge').classList.toggle('hidden', gameState.mode !== 'campaign');
   const isCampaignBoard = gameState.mode === 'campaign';
+  const isGMUser = isCampaignBoard && _isHostOrAdmin(gameState, getState().username);
   const gmToolbar = $('gm-toolbar');
-  if (gmToolbar) gmToolbar.classList.toggle('hidden', !isCampaignBoard);
+  if (gmToolbar) gmToolbar.classList.toggle('hidden', !isGMUser);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1148,12 +1173,30 @@ function initGameActions() {
   });
 
   // GM toolbar buttons
-  const deckBtn    = $('btn-gm-deck');
-  const saveBtn    = $('btn-save-session');
-  if (deckBtn)  deckBtn.addEventListener('click',  () => requestDeck());
-  if (saveBtn)  saveBtn.addEventListener('click',  () => {
-    saveSession(_logEntries);
-    showToast('Sessione salvata!');
+  const deckBtn       = $('btn-gm-deck');
+  const saveBtn       = $('btn-save-session');
+  const groupDrawBtn  = $('btn-group-draw');
+  const resetAllHpBtn = $('btn-reset-all-hp');
+  if (deckBtn)      deckBtn.addEventListener('click', () => requestDeck());
+  if (saveBtn)      saveBtn.addEventListener('click', () => { saveSession(_logEntries); showToast('Sessione salvata!'); });
+  if (groupDrawBtn) groupDrawBtn.addEventListener('click', () => {
+    const raw = prompt('Quante carte pesca ciascun giocatore? (1–5)', '1');
+    if (raw === null) return;
+    const n = Math.max(1, Math.min(5, parseInt(raw, 10) || 1));
+    gmRandom({ action: 'group_draw', count: n });
+  });
+  if (resetAllHpBtn) resetAllHpBtn.addEventListener('click', () => {
+    gmRandom({ action: 'reset_all_hp' });
+  });
+
+  // Master Tools: admin quick-action buttons
+  $('btn-mt-reset-hp')?.addEventListener('click', () => {
+    if (!_currentModalCard) return;
+    manualEdit({ type: 'reset_hp', cardUid: _currentModalCard.uid });
+  });
+  $('btn-mt-clear-markers')?.addEventListener('click', () => {
+    if (!_currentModalCard) return;
+    manualEdit({ type: 'marker', cardUid: _currentModalCard.uid, color: 'all' });
   });
 
   // Log panel
@@ -1450,6 +1493,22 @@ function initSocketListeners() {
     renderGameBoard(gameState);
     showScreen('game');
     showTurnBanner(`Sessione ripristinata — turno di ${gameState.currentTurn}`);
+  });
+
+  on('socket:gm_random_result', ({ results, gameState: newGs }) => {
+    if (!newGs) return;
+    const me    = getState().username;
+    const oldGs = getState().gameState;
+    showCombatFloaters(oldGs, newGs);
+    setState({ gameState: newGs });
+    renderPlayersBar(newGs);
+    renderOpponentsArea(newGs);
+    renderField(newGs.players[me]?.field ?? [], 'player-field');
+    renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
+    updateZoneCounts(newGs);
+    $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
+    for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
+    for (const msg of results) addToLog(msg, 'system');
   });
 
   on('socket:game_over', ({ winner }) => {

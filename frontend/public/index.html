@@ -465,11 +465,19 @@
     <!-- Campaign mode badge -->
     <div class="campaign-badge hidden" id="campaign-badge">Campagna</div>
 
-    <!-- GM toolbar (campaign mode only) -->
+    <!-- GM toolbar (campaign mode, admin/host only) -->
     <div id="gm-toolbar" class="gm-toolbar hidden">
       <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-gm-deck">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
         Mazzo
+      </button>
+      <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-group-draw">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Pescano tutti
+      </button>
+      <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-reset-all-hp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.7C5.4 21.7 2 17 2 12s3.4-9.7 10-9.7 10 4.3 10 9.7-3.4 9.7-10 9.7z"/><path d="M12 7v5l3 3"/></svg>
+        Reset HP
       </button>
       <button class="btn btn-xs btn-outline gm-tb-btn" id="btn-save-session">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -786,6 +794,14 @@
       <div class="mt-move-label">Sposta in</div>
       <div class="mt-move-row" id="mt-move-row">
         <!-- Populated dynamically: per-player buttons + zone buttons -->
+      </div>
+      <!-- Admin-only quick actions -->
+      <div id="mt-admin-section" class="mt-admin-section hidden">
+        <div class="mt-divider">Admin</div>
+        <div class="mt-move-row">
+          <button class="btn btn-sm btn-outline mt-admin-btn" id="btn-mt-reset-hp">↺ Reset HP</button>
+          <button class="btn btn-sm btn-outline mt-admin-btn" id="btn-mt-clear-markers">✕ Azzera marker</button>
+        </div>
       </div>
     </div>
   </div>

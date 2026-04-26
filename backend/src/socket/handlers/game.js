@@ -554,16 +554,24 @@ function registerGameHandlers(io, socket) {
         log = `[GM] ${username} → ${card.name}: ATK ${d >= 0 ? '+' : ''}${d} (ora ${card.damage})`;
       }
     } else if (type === 'marker') {
-      const VALID = ['green', 'red', 'blue', 'yellow'];
-      if (!VALID.includes(color)) return socket.emit('error_msg', 'Colore marker non valido');
-      const d = Number(delta) || 1;
-      if (!card.markers) card.markers = { green: 0, red: 0, blue: 0, yellow: 0 };
-      card.markers[color] = Math.max(0, Math.min(5, (card.markers[color] ?? 0) + d));
-      const LABELS = { green: 'verde', red: 'rosso', blue: 'blu', yellow: 'giallo' };
-      log = `[GM] ${username} → ${card.name}: marker ${LABELS[color]} ora ${card.markers[color]}`;
+      if (color === 'all') {
+        if (!isGM) return socket.emit('error_msg', 'Solo il GM può azzerare tutti i marker');
+        card.markers = { green: 0, red: 0, blue: 0, yellow: 0 };
+        log = `[GM] ${username} → ${card.name}: tutti i marker azzerati`;
+      } else {
+        const VALID = ['green', 'red', 'blue', 'yellow'];
+        if (!VALID.includes(color)) return socket.emit('error_msg', 'Colore marker non valido');
+        const d = Number(delta) || 1;
+        if (!card.markers) card.markers = { green: 0, red: 0, blue: 0, yellow: 0 };
+        card.markers[color] = Math.max(0, Math.min(5, (card.markers[color] ?? 0) + d));
+        const LABELS = { green: 'verde', red: 'rosso', blue: 'blu', yellow: 'giallo' };
+        log = `[GM] ${username} → ${card.name}: marker ${LABELS[color]} ora ${card.markers[color]}`;
+      }
     } else if (type === 'move') {
-      const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom'];
+      const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom', 'hand_random', 'field_random'];
       if (!validTo.includes(to)) return socket.emit('error_msg', 'Destinazione non valida');
+      if ((to === 'hand_random' || to === 'field_random') && !isGM)
+        return socket.emit('error_msg', 'Solo il GM può usare destinazioni casuali');
 
       // Remove from current zone
       _removeCardFromZone(gs, found);
@@ -616,20 +624,51 @@ function registerGameHandlers(io, socket) {
         clean.currentHp = clean.hp;
         gs.deck.unshift(clean);  // unshift = bottom (pop draws from top)
         log = `[GM] ${username} rimette ${card.name} in fondo al mazzo`;
+
+      } else if (to === 'hand_random') {
+        const playerNames = Object.keys(gs.players);
+        const randUser    = playerNames[Math.floor(Math.random() * playerNames.length)];
+        const targetState = gs.players[randUser];
+        const clean = { ...card }; delete clean.owner;
+        clean.currentHp = clean.hp;
+        targetState.hand.push(clean);
+        const sid = findSocketId(randUser);
+        if (sid) io.to(sid).emit('hand_updated', { hand: targetState.hand });
+        log = `[GM] ${username} sposta ${card.name} → mano casuale di ${randUser}`;
+
+      } else if (to === 'field_random') {
+        const playerNames = Object.keys(gs.players);
+        const shuffled    = [...playerNames].sort(() => Math.random() - 0.5);
+        let placed = false;
+        for (const randUser of shuffled) {
+          const targetState = gs.players[randUser];
+          const freeSlot    = targetState.field.findIndex(s => s === null);
+          if (freeSlot !== -1) {
+            const clean = { ...card }; delete clean.owner;
+            clean.currentHp   = clean.currentHp ?? clean.hp;
+            clean.haAttaccato = false;
+            targetState.field[freeSlot] = clean;
+            log     = `[GM] ${username} sposta ${card.name} → campo casuale di ${randUser} (slot ${freeSlot})`;
+            placed  = true;
+            break;
+          }
+        }
+        if (!placed) return socket.emit('error_msg', 'Nessuno slot libero in campo');
       }
+    } else if (type === 'reset_hp') {
+      card.currentHp = card.hp;
+      log = `[GM] ${username} → ${card.name}: HP ripristinato a ${card.hp}`;
     }
 
     const publicGs = sanitiseGs(gs);
     io.to(roomCode).emit('manual_edit_applied', { gameState: publicGs, log });
   });
 
-  // ── gm_note (campaign only, GM only) ────────────────────────────────────────
+  // ── gm_note (campaign only — all campaign players) ───────────────────────────
 
   socket.on('gm_note', ({ text, type = 'note' } = {}) => {
     const { room, roomCode } = getRoomAndState();
     if (!room || room.mode !== 'campaign') return;
-    const isGM = room.host === username || isAdminUser(username);
-    if (!isGM) return socket.emit('error_msg', 'Solo il GM può aggiungere note');
     const clean = String(text ?? '').trim();
     if (!clean) return;
     io.to(roomCode).emit('gm_note', { username, text: clean, type });
@@ -685,6 +724,60 @@ function registerGameHandlers(io, socket) {
       const sid = findSocketId(uname);
       if (sid) io.to(sid).emit('hand_updated', { hand: pState.hand });
     }
+  });
+
+  // ── gm_random (campaign only, GM only) ──────────────────────────────────────
+  // action 'group_draw'      — all players draw N cards from deck
+  // action 'reset_all_hp'    — reset HP of all field cards to max
+  // action 'clear_all_markers' — clear all markers from all field cards
+
+  socket.on('gm_random', ({ action, count = 1 } = {}) => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!gs || room.mode !== 'campaign') return;
+    const isGM = room.host === username || isAdminUser(username);
+    if (!isGM) return socket.emit('error_msg', 'Solo il GM può usare strumenti di gruppo');
+
+    const results = [];
+
+    if (action === 'group_draw') {
+      const n = Math.max(1, Math.min(5, Number(count) || 1));
+      for (const [uname, pState] of Object.entries(gs.players)) {
+        let drawn = 0;
+        for (let i = 0; i < n; i++) {
+          const card = gs.deck.pop();
+          if (!card) break;
+          pState.hand.push(card);
+          drawn++;
+        }
+        const sid = findSocketId(uname);
+        if (sid) io.to(sid).emit('hand_updated', { hand: pState.hand });
+        if (drawn < n) results.push('Mazzo esaurito');
+      }
+      results.push(`[GM] Tutti i giocatori pescano ${n} carta${n !== 1 ? 'e' : ''} dal mazzo`);
+
+    } else if (action === 'reset_all_hp') {
+      for (const pState of Object.values(gs.players)) {
+        for (const card of pState.field) {
+          if (card) card.currentHp = card.hp;
+        }
+        if (pState.artifactSlot) pState.artifactSlot.currentHp = pState.artifactSlot.hp;
+      }
+      results.push('[GM] HP di tutte le creature ripristinato');
+
+    } else if (action === 'clear_all_markers') {
+      for (const pState of Object.values(gs.players)) {
+        for (const card of pState.field) {
+          if (card?.markers) card.markers = { green: 0, red: 0, blue: 0, yellow: 0 };
+        }
+      }
+      results.push('[GM] Tutti i marker rimossi dal campo');
+
+    } else {
+      return socket.emit('error_msg', 'Azione di gruppo non riconosciuta');
+    }
+
+    const publicGs = sanitiseGs(gs);
+    io.to(roomCode).emit('gm_random_result', { results, gameState: publicGs });
   });
 
   // ── leave_match ───────────────────────────────────────────────────────────────

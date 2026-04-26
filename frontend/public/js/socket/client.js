@@ -70,6 +70,7 @@ export function connectSocket() {
   socket.on('deck_contents',         data => busEmit('socket:deck_contents',          data));
   socket.on('session_saved',         data => busEmit('socket:session_saved',          data));
   socket.on('session_restored',      data => busEmit('socket:session_restored',       data));
+  socket.on('gm_random_result',      data => busEmit('socket:gm_random_result',       data));
 }
 
 // ── Room actions ──────────────────────────────────────────────────────────────
@@ -174,4 +175,9 @@ export function saveSession(logEntries) {
 
 export function restoreSession() {
   getSocket()?.emit('restore_session');
+}
+
+/** @param {{ action: string, count?: number }} payload */
+export function gmRandom(payload) {
+  getSocket()?.emit('gm_random', payload);
 }
