@@ -229,6 +229,17 @@
       <div id="players-list" class="players-list"></div>
     </div>
 
+    <!-- Lobby quick actions: dice for all players -->
+    <div class="lobby-actions">
+      <div class="lobby-dice-row">
+        <span class="lobby-dice-label">🎲 Lancia dado:</span>
+        <button class="btn btn-sm btn-outline die-lobby-btn" data-sides="6">D6</button>
+        <button class="btn btn-sm btn-outline die-lobby-btn" data-sides="10">D10</button>
+        <button class="btn btn-sm btn-outline die-lobby-btn" data-sides="20">D20</button>
+      </div>
+      <div id="lobby-dice-result" class="lobby-dice-result"></div>
+    </div>
+
     <!-- Controls -->
     <div id="host-controls" class="host-controls hidden">
       <p id="start-hint" class="start-hint">Servono almeno 2 giocatori</p>
@@ -464,6 +475,52 @@
     </div>
     <!-- Campaign mode badge -->
     <div class="campaign-badge hidden" id="campaign-badge">Campagna</div>
+
+    <!-- Game menu button (top-right, always visible during game) -->
+    <button id="btn-game-menu" class="btn-game-menu" title="Menu comandi" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+        <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+      </svg>
+    </button>
+
+    <!-- Game menu drawer -->
+    <div id="game-menu" class="game-menu hidden" role="dialog" aria-modal="true">
+      <div id="game-menu-overlay" class="game-menu-overlay"></div>
+      <div class="game-menu-panel">
+        <div class="game-menu-header">
+          <span>Comandi</span>
+          <button id="game-menu-close" class="btn btn-outline btn-sm">✕</button>
+        </div>
+        <div class="game-menu-body">
+          <button class="game-menu-item" id="gmenu-roll-dice">
+            <span class="gmi-icon">🎲</span> Lancia dado
+          </button>
+          <div id="dice-picker" class="dice-picker hidden">
+            <button class="die-btn" data-sides="6">D6</button>
+            <button class="die-btn" data-sides="10">D10</button>
+            <button class="die-btn" data-sides="20">D20</button>
+          </div>
+          <button class="game-menu-item hidden" id="gmenu-draw-card">
+            <span class="gmi-icon">🃏</span> Pesca 1 carta
+          </button>
+          <div id="gmenu-admin-section" class="game-menu-section hidden">
+            <div class="game-menu-divider">GM</div>
+            <button class="game-menu-item" id="gmenu-deck">
+              <span class="gmi-icon">📚</span> Mazzo
+            </button>
+            <button class="game-menu-item" id="gmenu-group-draw">
+              <span class="gmi-icon">➕</span> Pescano tutti
+            </button>
+            <button class="game-menu-item" id="gmenu-reset-all-hp">
+              <span class="gmi-icon">↺</span> Reset HP globale
+            </button>
+            <button class="game-menu-item" id="gmenu-save-session">
+              <span class="gmi-icon">💾</span> Salva sessione
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- GM toolbar (campaign mode, admin/host only) -->
     <div id="gm-toolbar" class="gm-toolbar hidden">

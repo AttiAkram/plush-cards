@@ -184,3 +184,34 @@
   color:      var(--c-sub);
   text-align: center;
 }
+
+/* ── Lobby quick actions (dice) ───────────────── */
+.lobby-actions {
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+  padding:        12px 14px;
+  background:     var(--c-white);
+  border-radius:  var(--radius);
+  border:         1px solid var(--c-border);
+}
+
+.lobby-dice-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+}
+
+.lobby-dice-label {
+  font-size:   12px;
+  font-weight: 600;
+  color:       var(--c-sub);
+}
+
+.lobby-dice-result {
+  font-size:   13px;
+  font-weight: 700;
+  color:       var(--c-text);
+  min-height:  16px;
+}

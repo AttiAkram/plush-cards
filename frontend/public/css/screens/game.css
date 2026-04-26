@@ -1361,6 +1361,122 @@
   background:  rgba(255,255,255,0.9);
 }
 
+/* ── Game menu button (top-right, floating ⋮) ─── */
+.btn-game-menu {
+  position:        absolute;
+  top:             8px;
+  right:           12px;
+  z-index:         20;
+  width:           32px;
+  height:          32px;
+  border-radius:   50%;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  background:      var(--c-white);
+  border:          1.5px solid var(--c-border);
+  cursor:          pointer;
+  box-shadow:      0 1px 4px rgba(0,0,0,0.08);
+}
+.btn-game-menu:hover { background: var(--c-bg); }
+
+/* ── Game menu drawer ────────────────────────── */
+.game-menu { position: fixed; inset: 0; z-index: 250; }
+.game-menu.hidden { display: none; }
+
+.game-menu-overlay {
+  position:   absolute;
+  inset:      0;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.game-menu-panel {
+  position:       absolute;
+  top:            0; right: 0; bottom: 0;
+  width:          240px;
+  background:     var(--c-white);
+  display:        flex;
+  flex-direction: column;
+  box-shadow:     -4px 0 24px rgba(0,0,0,0.12);
+  overflow:       hidden;
+}
+
+.game-menu-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         13px 14px;
+  border-bottom:   1px solid var(--c-border);
+  font-weight:     700;
+  font-size:       14px;
+  flex-shrink:     0;
+}
+
+.game-menu-body {
+  flex:       1;
+  overflow-y: auto;
+  padding:    6px 0;
+}
+
+.game-menu-item {
+  display:    flex;
+  align-items: center;
+  gap:         10px;
+  width:       100%;
+  padding:     11px 14px;
+  background:  none;
+  border:      none;
+  cursor:      pointer;
+  font-size:   13px;
+  text-align:  left;
+  color:       var(--c-text);
+}
+.game-menu-item:hover   { background: var(--c-bg); }
+.game-menu-item.hidden  { display: none; }
+.gmi-icon { font-size: 17px; width: 22px; text-align: center; }
+
+.game-menu-divider {
+  padding:        8px 14px 3px;
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color:          var(--c-sub);
+  border-top:     1px solid var(--c-border);
+  margin-top:     4px;
+}
+
+.game-menu-section.hidden { display: none; }
+
+.dice-picker {
+  display:  flex;
+  gap:      6px;
+  padding:  4px 14px 10px;
+}
+.dice-picker.hidden { display: none; }
+.die-btn {
+  flex:          1;
+  padding:       6px 4px;
+  background:    var(--c-bg);
+  border:        1.5px solid var(--c-border);
+  border-radius: 6px;
+  font-size:     12px;
+  font-weight:   700;
+  cursor:        pointer;
+  text-align:    center;
+}
+.die-btn:hover { border-color: var(--c-text); background: var(--c-white); }
+
+@media (max-width: 600px) {
+  .btn-game-menu { top: auto; bottom: 70px; }
+  .game-menu-panel {
+    top:          auto; right: 0; left: 0; bottom: 0;
+    width:        100%;
+    border-radius: 14px 14px 0 0;
+    max-height:   72vh;
+  }
+}
+
 /* ── GM Deck Panel ───────────────────────────── */
 .gm-deck-panel {
   position: fixed;

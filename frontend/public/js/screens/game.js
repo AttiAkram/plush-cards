@@ -17,7 +17,8 @@ import { createCardEl, creatureArtHtml }          from '../components/card.js';
 import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard,
          manualEdit, sendGmNote, requestDeck,
-         saveSession, restoreSession, gmRandom }  from '../socket/client.js';
+         saveSession, restoreSession, gmRandom,
+         rollDice, drawCard }                     from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -666,9 +667,10 @@ function openCardModal(card) {
   $('card-modal-discard').classList.toggle('hidden', !((isMyTurn || isCampaign) && inMyHand));
   $('card-modal-attack').classList.toggle('hidden',  !canAttack);
 
-  // Master Tools — campaign mode only, for GM or own cards
-  const cardOwner = _findCardOwner(gameState, card.uid);
-  const canUseMT  = isCampaign && (isGM || cardOwner === username);
+  // Master Tools — campaign mode: GM for any card, all players for own cards or zone cards
+  const cardOwner   = _findCardOwner(gameState, card.uid);
+  const isZoneCard  = cardOwner === null;  // card lives in void/absolute/discard/deck
+  const canUseMT    = isCampaign && (isGM || cardOwner === username || isZoneCard);
   $('master-tools').classList.toggle('hidden', !canUseMT);
   if (canUseMT) _renderMasterTools(card, gameState, username);
 
@@ -777,7 +779,7 @@ function _renderMasterTools(card, gameState, me) {
     myFieldBtn.dataset.toUser = me;
     moveRow.appendChild(myFieldBtn);
   }
-  for (const [to, label] of [['discard','Scarti'],['void','Vuoto'],['absolute','Assoluto'],['deck_top','Deck (sopra)'],['deck_bottom','Deck (fondo)']]) {
+  for (const [to, label] of [['discard','Scarti'],['void','Vuoto'],['absolute','Assoluto'],['deck_top','Deck (sopra)'],['deck_bottom','Deck (fondo)'],['deck_random','Deck (casuale)']]) {
     const btn = el('button', 'btn btn-sm btn-outline mt-move-btn');
     btn.textContent = label;
     btn.dataset.to  = to;
@@ -1114,13 +1116,69 @@ export function renderGameBoard(gameState) {
   renderField(myState.field, 'player-field');
   renderArtifactSlot(myState.artifactSlot, 'player-artifact-slot');
 
-  // Debug / campaign badges + GM toolbar (toolbar is admin/host only)
+  // Debug / campaign badges — GM toolbar is permanently hidden (use game menu instead)
   $('debug-badge').classList.toggle('hidden', !gameState.debugMode);
   $('campaign-badge').classList.toggle('hidden', gameState.mode !== 'campaign');
-  const isCampaignBoard = gameState.mode === 'campaign';
-  const isGMUser = isCampaignBoard && _isHostOrAdmin(gameState, getState().username);
-  const gmToolbar = $('gm-toolbar');
-  if (gmToolbar) gmToolbar.classList.toggle('hidden', !isGMUser);
+  $('gm-toolbar')?.classList.add('hidden');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GAME MENU (floating ⋮ button)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function initGameMenu() {
+  const menuEl     = $('game-menu');
+  const dicePicker = $('dice-picker');
+
+  function openMenu() {
+    const gs   = getState().gameState;
+    const me   = getState().username;
+    const isCampaign = gs?.mode === 'campaign';
+    const isGM = isCampaign && _isHostOrAdmin(gs, me);
+
+    $('gmenu-draw-card').classList.toggle('hidden', !isCampaign);
+    $('gmenu-admin-section')?.classList.toggle('hidden', !isGM);
+    dicePicker?.classList.add('hidden');
+    menuEl.classList.remove('hidden');
+  }
+
+  function closeMenu() { menuEl.classList.add('hidden'); }
+
+  $('btn-game-menu').addEventListener('click', openMenu);
+  $('game-menu-close').addEventListener('click', closeMenu);
+  $('game-menu-overlay').addEventListener('click', closeMenu);
+
+  // Dice: toggle picker
+  $('gmenu-roll-dice').addEventListener('click', () => dicePicker?.classList.toggle('hidden'));
+  dicePicker?.querySelectorAll('.die-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      rollDice(parseInt(btn.dataset.sides, 10));
+      closeMenu();
+    });
+  });
+
+  // Draw card
+  $('gmenu-draw-card').addEventListener('click', () => { drawCard(); closeMenu(); });
+
+  // GM: deck viewer
+  $('gmenu-deck')?.addEventListener('click', () => { requestDeck(); closeMenu(); });
+
+  // GM: group draw
+  $('gmenu-group-draw')?.addEventListener('click', () => {
+    const raw = prompt('Quante carte pesca ciascun giocatore? (1–5)', '1');
+    if (raw !== null) gmRandom({ action: 'group_draw', count: Math.max(1, Math.min(5, parseInt(raw, 10) || 1)) });
+    closeMenu();
+  });
+
+  // GM: reset all HP
+  $('gmenu-reset-all-hp')?.addEventListener('click', () => { gmRandom({ action: 'reset_all_hp' }); closeMenu(); });
+
+  // GM: save session
+  $('gmenu-save-session')?.addEventListener('click', () => {
+    saveSession(_logEntries);
+    showToast('Sessione salvata!');
+    closeMenu();
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1190,23 +1248,6 @@ function initGameActions() {
     manualEdit({ type: 'marker', cardUid: _currentModalCard.uid, color, delta });
   });
 
-  // GM toolbar buttons
-  const deckBtn       = $('btn-gm-deck');
-  const saveBtn       = $('btn-save-session');
-  const groupDrawBtn  = $('btn-group-draw');
-  const resetAllHpBtn = $('btn-reset-all-hp');
-  if (deckBtn)      deckBtn.addEventListener('click', () => requestDeck());
-  if (saveBtn)      saveBtn.addEventListener('click', () => { saveSession(_logEntries); showToast('Sessione salvata!'); });
-  if (groupDrawBtn) groupDrawBtn.addEventListener('click', () => {
-    const raw = prompt('Quante carte pesca ciascun giocatore? (1–5)', '1');
-    if (raw === null) return;
-    const n = Math.max(1, Math.min(5, parseInt(raw, 10) || 1));
-    gmRandom({ action: 'group_draw', count: n });
-  });
-  if (resetAllHpBtn) resetAllHpBtn.addEventListener('click', () => {
-    gmRandom({ action: 'reset_all_hp' });
-  });
-
   // Master Tools: admin quick-action buttons
   $('btn-mt-reset-hp')?.addEventListener('click', () => {
     if (!_currentModalCard) return;
@@ -1216,6 +1257,8 @@ function initGameActions() {
     if (!_currentModalCard) return;
     manualEdit({ type: 'marker', cardUid: _currentModalCard.uid, color: 'all' });
   });
+
+  initGameMenu();
 
   // Log panel
   $('btn-toggle-log').addEventListener('click', openLog);
@@ -1511,6 +1554,11 @@ function initSocketListeners() {
     renderGameBoard(gameState);
     showScreen('game');
     showTurnBanner(`Sessione ripristinata — turno di ${gameState.currentTurn}`);
+  });
+
+  on('socket:dice_rolled', ({ username: who, sides, result }) => {
+    addToLog(`🎲 ${who} tira ${result} su D${sides}`, 'system');
+    showToast(`🎲 ${who}: ${result} (D${sides})`);
   });
 
   on('socket:gm_random_result', ({ results, gameState: newGs }) => {

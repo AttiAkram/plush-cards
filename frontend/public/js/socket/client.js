@@ -71,6 +71,7 @@ export function connectSocket() {
   socket.on('session_saved',         data => busEmit('socket:session_saved',          data));
   socket.on('session_restored',      data => busEmit('socket:session_restored',       data));
   socket.on('gm_random_result',      data => busEmit('socket:gm_random_result',       data));
+  socket.on('dice_rolled',           data => busEmit('socket:dice_rolled',            data));
 }
 
 // ── Room actions ──────────────────────────────────────────────────────────────
@@ -180,4 +181,13 @@ export function restoreSession() {
 /** @param {{ action: string, count?: number }} payload */
 export function gmRandom(payload) {
   getSocket()?.emit('gm_random', payload);
+}
+
+/** @param {number} sides */
+export function rollDice(sides) {
+  getSocket()?.emit('roll_dice', { sides });
+}
+
+export function drawCard() {
+  getSocket()?.emit('draw_card');
 }

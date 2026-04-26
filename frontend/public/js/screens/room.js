@@ -7,7 +7,7 @@ import { getState, setState } from '../state/store.js';
 import { showScreen }         from '../router/index.js';
 import { showToast }          from '../components/toast.js';
 import { on }                 from '../events/emitter.js';
-import { leaveRoom, startGame, startDebugGame, toggleReady, restoreSession } from '../socket/client.js';
+import { leaveRoom, startGame, startDebugGame, toggleReady, restoreSession, rollDice } from '../socket/client.js';
 import { enterLobby }         from './lobby.js';
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -125,6 +125,12 @@ function initReadyButton() {
 
 // ── Socket events ──────────────────────────────────────────────────────────────
 
+function initLobbyDice() {
+  document.querySelectorAll('.die-lobby-btn').forEach(btn => {
+    btn.addEventListener('click', () => rollDice(parseInt(btn.dataset.sides, 10)));
+  });
+}
+
 function initSocketListeners() {
   on('socket:room_created', room => { renderRoom(room); showScreen('room'); });
   on('socket:room_joined',  room => { renderRoom(room); showScreen('room'); });
@@ -134,6 +140,12 @@ function initSocketListeners() {
   });
   on('socket:room_left', () => enterLobby());
   on('socket:error',     msg => showToast(msg, true));
+
+  on('socket:dice_rolled', ({ username: who, sides, result }) => {
+    showToast(`🎲 ${who}: ${result} su D${sides}`);
+    const el = $('lobby-dice-result');
+    if (el) el.textContent = `${who} → ${result} su D${sides}`;
+  });
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -144,5 +156,6 @@ export function initRoomScreen() {
   initCopyCode();
   initStartButton();
   initReadyButton();
+  initLobbyDice();
   initSocketListeners();
 }

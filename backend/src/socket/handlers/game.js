@@ -143,24 +143,9 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Solo il host può iniziare la partita');
 
     const debugAllowed = debug && isAdminUser(username);
+    const isCampaign   = room.mode === 'campaign';
 
-    // Campaign mode: skip all checks, no draft, random artifact assignment
-    if (room.mode === 'campaign') {
-      room.status    = 'playing';
-      room.gameState = initGameState(room, {});
-      return io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
-    }
-
-    if (room.players.length < 2 && !debugAllowed)
-      return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
-
-    if (!debugAllowed) {
-      const allReady = room.players.every(p => room.ready[p.username]);
-      if (!allReady)
-        return socket.emit('error_msg', 'Non tutti i giocatori sono pronti');
-    }
-
-    // Debug mode: skip draft, start immediately with random artifacts
+    // Debug mode: always skip draft
     if (debugAllowed) {
       room.status    = 'playing';
       room.gameState = initGameState(room, {});
@@ -168,7 +153,16 @@ function registerGameHandlers(io, socket) {
       return io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
     }
 
-    // ── Draft phase setup ────────────────────────────────────────────────────
+    // Rules mode only: enforce player count and ready state
+    if (!isCampaign) {
+      if (room.players.length < 2)
+        return socket.emit('error_msg', 'Servono almeno 2 giocatori per iniziare');
+      const allReady = room.players.every(p => room.ready[p.username]);
+      if (!allReady)
+        return socket.emit('error_msg', 'Non tutti i giocatori sono pronti');
+    }
+
+    // Both modes: artifact draft phase (3 choices per player)
     const pool = createArtifactPool();
     room.draftChoices = {};
     room.draftPicks   = {};
@@ -181,24 +175,18 @@ function registerGameHandlers(io, socket) {
       const choices = pool.slice(poolIdx, poolIdx + DRAFT_CHOICES);
       poolIdx += DRAFT_CHOICES;
       room.draftChoices[uname] = choices;
-
-      // If this player has no choices (pool exhausted), auto-pick null
-      if (choices.length === 0) {
-        room.draftPicks[uname] = null;
-      }
+      if (choices.length === 0) room.draftPicks[uname] = null;
     }
 
-    // Send private choices to each player
     for (const { username: uname } of room.players) {
       const sid = findSocketId(uname);
       if (!sid) continue;
       io.to(sid).emit('draft_started', {
-        choices:     room.draftChoices[uname] ?? [],
-        waitingFor:  allUsernames,
+        choices:    room.draftChoices[uname] ?? [],
+        waitingFor: allUsernames,
       });
     }
 
-    // If everyone was auto-resolved (no artifacts in pool), start game now
     const waitingFor = allUsernames.filter(u => !(u in room.draftPicks));
     if (waitingFor.length === 0) _finalizeDraft(io, room, roomCode);
   });
@@ -551,7 +539,10 @@ function registerGameHandlers(io, socket) {
     if (!found) return socket.emit('error_msg', 'Carta non trovata');
 
     const ownerUsername = found.owner;
-    if (!isGM && ownerUsername !== username)
+    // Zone cards (void, absolute, discard, deck) have no personal owner —
+    // all campaign players may interact with them
+    const isSharedZone = ['void', 'absolute', 'discard', 'deck'].includes(found.zone);
+    if (!isGM && !isSharedZone && ownerUsername !== username)
       return socket.emit('error_msg', 'Non puoi modificare le carte degli altri');
 
     const { card } = found;
@@ -581,7 +572,7 @@ function registerGameHandlers(io, socket) {
         log = `[GM] ${username} → ${card.name}: marker ${LABELS[color]} ora ${card.markers[color]}`;
       }
     } else if (type === 'move') {
-      const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom', 'hand_random', 'field_random'];
+      const validTo = ['hand', 'field', 'discard', 'void', 'absolute', 'deck_top', 'deck_bottom', 'deck_random', 'hand_random', 'field_random'];
       if (!validTo.includes(to)) return socket.emit('error_msg', 'Destinazione non valida');
       if ((to === 'hand_random' || to === 'field_random') && !isGM)
         return socket.emit('error_msg', 'Solo il GM può usare destinazioni casuali');
@@ -637,6 +628,13 @@ function registerGameHandlers(io, socket) {
         clean.currentHp = clean.hp;
         gs.deck.unshift(clean);  // unshift = bottom (pop draws from top)
         log = `[GM] ${username} rimette ${card.name} in fondo al mazzo`;
+
+      } else if (to === 'deck_random') {
+        const clean = { ...card }; delete clean.owner;
+        clean.currentHp = clean.hp;
+        const pos = Math.floor(Math.random() * (gs.deck.length + 1));
+        gs.deck.splice(pos, 0, clean);
+        log = `[GM] ${username} rimette ${card.name} nel mazzo (posizione casuale)`;
 
       } else if (to === 'hand_random') {
         const playerNames = Object.keys(gs.players);
@@ -791,6 +789,34 @@ function registerGameHandlers(io, socket) {
 
     const publicGs = sanitiseGs(gs);
     io.to(roomCode).emit('gm_random_result', { results, gameState: publicGs });
+  });
+
+  // ── roll_dice — works in lobby and during game ───────────────────────────────
+
+  socket.on('roll_dice', ({ sides = 20 } = {}) => {
+    const { room, roomCode } = getRoomAndState();
+    if (!room || !roomCode) return;
+    const VALID = [4, 6, 8, 10, 12, 20, 100];
+    const s = VALID.includes(Number(sides)) ? Number(sides) : 20;
+    const result = Math.floor(Math.random() * s) + 1;
+    io.to(roomCode).emit('dice_rolled', { username, sides: s, result });
+  });
+
+  // ── draw_card (campaign only — draws 1 card from shared deck into own hand) ──
+
+  socket.on('draw_card', () => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!gs) return;
+    if (room.mode !== 'campaign')
+      return socket.emit('error_msg', 'Pesca manuale solo in modalità campagna');
+    const myState = gs.players[username];
+    if (!myState) return;
+    const card = gs.deck.pop();
+    if (!card) return socket.emit('error_msg', 'Mazzo vuoto');
+    myState.hand.push(card);
+    const log = `${username} pesca 1 carta (manuale)`;
+    socket.emit('hand_updated', { hand: myState.hand });
+    io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
   });
 
   // ── leave_match ───────────────────────────────────────────────────────────────

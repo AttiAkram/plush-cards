@@ -9,7 +9,9 @@
       "Bash(docker compose:*)",
       "Bash(curl -s http://localhost/api/health)",
       "Bash(curl -s http://localhost/)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
