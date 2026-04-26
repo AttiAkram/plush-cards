@@ -46,9 +46,7 @@ function registerRoomHandlers(io, socket) {
 
   // ── create_room ─────────────────────────────────────────────────────────────
   socket.on('create_room', ({ roomName, mode } = {}) => {
-    const user    = store.users.get(username?.toLowerCase());
-    const isAdmin = user?.role === 'root' || user?.role === 'admin';
-    const roomMode = (mode === 'campaign' && isAdmin) ? 'campaign' : 'rules';
+    const roomMode = mode === 'campaign' ? 'campaign' : 'rules';
     const room = new Room(roomName, username, roomMode);
 
     // If a campaign session was previously saved for this GM, mark it

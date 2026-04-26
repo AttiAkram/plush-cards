@@ -326,7 +326,9 @@ function renderPlayersBar(gameState) {
   bar.innerHTML = '';
   bar.appendChild(leave);
 
-  const me = getState().username;
+  const me         = getState().username;
+  const isCampaign = gameState.mode === 'campaign';
+  const isGM       = isCampaign && _isHostOrAdmin(gameState, me);
 
   for (const username of Object.keys(gameState.players)) {
     const p      = gameState.players[username];
@@ -336,6 +338,7 @@ function renderPlayersBar(gameState) {
     const status      = p.status ?? 'active';
     const isEliminated = status === 'eliminated';
     const hpPct       = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const canEditHp   = isCampaign && !isEliminated && (isMe || isGM);
 
     const pill = el('div',
       `player-pill${isTurn ? ' is-turn' : ''}${isMe ? ' is-me' : ''} status-${status}`);
@@ -352,13 +355,28 @@ function renderPlayersBar(gameState) {
         <div class="player-pill-hp">
           <div class="player-hp-bar"><div class="player-hp-fill" style="width:${hpPct}%"></div></div>
           <span class="player-hp-text">${p.nexus.hp}</span>
-        </div>`}
+        </div>
+        ${canEditHp ? `
+        <div class="player-hp-controls">
+          <button class="btn btn-outline hp-ctrl-btn" data-delta="-5" data-target="${escHtml(username)}">−5</button>
+          <button class="btn btn-outline hp-ctrl-btn" data-delta="-1" data-target="${escHtml(username)}">−1</button>
+          <button class="btn btn-outline hp-ctrl-btn" data-delta="1"  data-target="${escHtml(username)}">+1</button>
+          <button class="btn btn-outline hp-ctrl-btn" data-delta="5"  data-target="${escHtml(username)}">+5</button>
+        </div>` : ''}`}
       </div>
       ${STATUS_ICONS[status] ?? ''}`;
 
-    // Clicking any pill opens that player's panel
-    pill.style.cursor = 'pointer';
-    pill.addEventListener('click', () => openPlayerPanel(username, getState().gameState));
+    // Click the pill body → open panel; click HP buttons → adjust life
+    pill.addEventListener('click', e => {
+      if (e.target.closest('.hp-ctrl-btn')) return;
+      openPlayerPanel(username, getState().gameState);
+    });
+    pill.querySelectorAll('.hp-ctrl-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        manualEdit({ type: 'nexus_hp', targetUsername: btn.dataset.target, delta: parseInt(btn.dataset.delta, 10) });
+      });
+    });
 
     bar.appendChild(pill);
   }

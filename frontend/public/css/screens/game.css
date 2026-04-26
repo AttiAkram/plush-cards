@@ -137,6 +137,27 @@
 }
 .player-pill.is-turn .player-hp-text { color: rgba(255,255,255,0.7); }
 
+/* HP ± controls (campaign mode only, inside the pill) */
+.player-hp-controls {
+  display:     flex;
+  gap:         2px;
+  margin-top:  1px;
+}
+.player-hp-controls .hp-ctrl-btn {
+  padding:     1px 5px;
+  font-size:   9px;
+  line-height: 1.3;
+  min-width:   22px;
+  border-radius: 3px;
+}
+.player-pill.is-turn .hp-ctrl-btn {
+  border-color: rgba(255,255,255,0.4);
+  color:        rgba(255,255,255,0.85);
+}
+.player-pill.is-turn .hp-ctrl-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 /* Status dot / icon */
 .ps-dot {
   font-size:   11px;

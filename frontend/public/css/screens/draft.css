@@ -5,6 +5,9 @@
   background:      var(--c-bg);
   align-items:     center;
   justify-content: center;
+  /* Larger cards on the draft screen */
+  --card-w: 150px;
+  --card-h: 210px;
 }
 
 .draft-board {

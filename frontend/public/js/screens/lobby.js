@@ -58,9 +58,7 @@ function renderRoomList(rooms) {
 // ── Create room modal ──────────────────────────────────────────────────────────
 
 function openCreateModal() {
-  const { role } = getState();
-  const isAdmin  = role === 'root' || role === 'admin';
-  $('create-mode-row').classList.toggle('hidden', !isAdmin);
+  $('create-mode-row').classList.remove('hidden');
   $('create-mode-campaign').checked = false;
   $('modal-create').classList.remove('hidden');
   $('room-name-input').focus();

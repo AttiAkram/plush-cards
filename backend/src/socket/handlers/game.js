@@ -526,12 +526,25 @@ function registerGameHandlers(io, socket) {
   // type 'stat'  — change HP or ATK of any card by delta
   // type 'move'  — move a card from wherever it is to a target zone
 
-  socket.on('manual_edit', ({ type, cardUid, stat, delta, color, to, toUsername, slotIndex } = {}) => {
+  socket.on('manual_edit', ({ type, cardUid, stat, delta, color, to, toUsername, slotIndex, targetUsername } = {}) => {
     const { room, roomCode, gs } = getRoomAndState();
     if (!gs || room.mode !== 'campaign')
       return socket.emit('error_msg', 'Solo in modalità campagna');
 
     const isGM = room.host === username || isAdminUser(username);
+
+    // ── nexus_hp: adjust a player's nexus HP (no card lookup needed) ───────────
+    if (type === 'nexus_hp') {
+      const target = targetUsername ?? username;
+      if (!isGM && target !== username)
+        return socket.emit('error_msg', 'Solo il GM può modificare la vita degli altri');
+      const pState = gs.players[target];
+      if (!pState) return socket.emit('error_msg', 'Giocatore non trovato');
+      const d = Number(delta) || 0;
+      pState.nexus.hp = Math.max(0, Math.min(pState.nexus.maxHp, pState.nexus.hp + d));
+      const log = `[${username}] ${target}: vita ${d >= 0 ? '+' : ''}${d} (ora ${pState.nexus.hp})`;
+      return io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
+    }
 
     // Find the card in all zones
     const found = _findCardEverywhere(gs, cardUid);
