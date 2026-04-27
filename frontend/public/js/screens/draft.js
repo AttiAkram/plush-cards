@@ -71,10 +71,13 @@ function renderDraft(choices, waitingFor) {
 // ── Socket listeners ──────────────────────────────────────────────────────────
 
 function initSocketListeners() {
-  on('socket:draft_started', ({ allChoices, waitingFor }) => {
+  on('socket:draft_started', (data) => {
     const { username } = getState();
-    const choices = allChoices?.[username] ?? [];
-    renderDraft(choices, waitingFor);
+    // Support both broadcast format (allChoices) and legacy per-socket format (choices)
+    const choices = data.allChoices
+      ? (data.allChoices[username] ?? [])
+      : (data.choices ?? []);
+    renderDraft(choices, data.waitingFor);
   });
 
   on('socket:draft_updated', ({ waitingFor }) => {

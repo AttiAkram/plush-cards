@@ -162,7 +162,14 @@ function registerGameHandlers(io, socket) {
         return socket.emit('error_msg', 'Non tutti i giocatori sono pronti');
     }
 
-    // Both modes: artifact draft phase (3 choices per player)
+    // Campaign mode: no draft — players get artifacts on demand via "Ottieni Artefatto" in-game
+    if (isCampaign) {
+      room.status    = 'playing';
+      room.gameState = initGameState(room, {});
+      return io.to(roomCode).emit('game_started', sanitiseGs(room.gameState));
+    }
+
+    // Rules mode: artifact draft phase (3 choices per player)
     const pool = createArtifactPool();
     room.draftChoices = {};
     room.draftPicks   = {};
@@ -216,6 +223,40 @@ function registerGameHandlers(io, socket) {
     } else {
       _finalizeDraft(io, room, roomCode);
     }
+  });
+
+  // ── get_artifact ─────────────────────────────────────────────────────────────
+  // Campaign only: player gets a random artifact on demand from the in-game menu.
+
+  socket.on('get_artifact', () => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!room || room.status !== 'playing') return;
+    if (room.mode !== 'campaign') return;
+
+    const pState = gs?.players[username];
+    if (!pState) return;
+
+    if (pState.artifactSlot) {
+      return socket.emit('error_msg', 'Hai già un artefatto per questa sessione');
+    }
+
+    // Exclude artifact IDs already assigned to any player in this game
+    const usedIds = new Set(
+      Object.values(gs.players)
+        .filter(p => p.artifactSlot)
+        .map(p => p.artifactSlot.id)
+    );
+
+    const available = createArtifactPool().filter(a => !usedIds.has(a.id));
+    if (available.length === 0) {
+      return socket.emit('error_msg', 'Nessun artefatto disponibile nel pool');
+    }
+
+    const artifact  = available[Math.floor(Math.random() * available.length)];
+    pState.artifactSlot = artifact;
+
+    const log = `${username} ottiene l'artefatto: ${artifact.name}`;
+    io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
   });
 
   // ── end_turn ─────────────────────────────────────────────────────────────────

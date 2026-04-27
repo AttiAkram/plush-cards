@@ -191,3 +191,7 @@ export function rollDice(sides) {
 export function drawCard() {
   getSocket()?.emit('draw_card');
 }
+
+export function getArtifact() {
+  getSocket()?.emit('get_artifact');
+}

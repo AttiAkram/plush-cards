@@ -18,7 +18,7 @@ import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard,
          manualEdit, sendGmNote, requestDeck,
          saveSession, restoreSession, gmRandom,
-         rollDice, drawCard }                     from '../socket/client.js';
+         rollDice, drawCard, getArtifact }         from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -1137,6 +1137,15 @@ function initGameMenu() {
     const isGM = isCampaign && _isHostOrAdmin(gs, me);
 
     $('gmenu-draw-card').classList.toggle('hidden', !isCampaign);
+
+    const artifactBtn = $('gmenu-get-artifact');
+    if (artifactBtn) {
+      const hasArtifact = !!gs?.players[me]?.artifactSlot;
+      artifactBtn.classList.toggle('hidden', !isCampaign);
+      artifactBtn.disabled = hasArtifact;
+      artifactBtn.title    = hasArtifact ? 'Hai già un artefatto' : '';
+    }
+
     $('gmenu-admin-section')?.classList.toggle('hidden', !isGM);
     dicePicker?.classList.add('hidden');
     menuEl.classList.remove('hidden');
@@ -1159,6 +1168,9 @@ function initGameMenu() {
 
   // Draw card
   $('gmenu-draw-card').addEventListener('click', () => { drawCard(); closeMenu(); });
+
+  // Get artifact (campaign only, once per player)
+  $('gmenu-get-artifact')?.addEventListener('click', () => { getArtifact(); closeMenu(); });
 
   // GM: deck viewer
   $('gmenu-deck')?.addEventListener('click', () => { requestDeck(); closeMenu(); });
