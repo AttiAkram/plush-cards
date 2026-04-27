@@ -43,11 +43,12 @@
   user-select:    none;
 }
 
-/* Active turn — black pill */
+/* Active turn — thick border, dark text, white bg (always readable) */
 .player-pill.is-turn {
-  background:   var(--c-text);
+  background:   var(--c-white);
   border-color: var(--c-text);
-  color:        #fff;
+  border-width: 2px;
+  color:        var(--c-text);
 }
 
 /* Disconnected / left — faded */
@@ -68,8 +69,9 @@
   color:           var(--c-text);
   flex-shrink:     0;
 }
+/* Active turn: invert avatar only */
 .player-pill.is-turn .player-avatar {
-  background: rgba(255,255,255,0.18);
+  background: var(--c-text);
   color:      #fff;
 }
 
@@ -77,8 +79,8 @@
 .player-pill-body {
   display:        flex;
   flex-direction: column;
-  gap:            3px;
-  min-width:      60px;
+  gap:            2px;
+  min-width:      52px;
 }
 
 .player-pill-name {
@@ -90,58 +92,43 @@
   align-items: center;
   gap:         4px;
 }
-.player-pill.is-turn .player-pill-name { color: #fff; }
 
 .you-badge {
-  font-size:      8px;
-  font-weight:    500;
-  padding:        1px 5px;
-  border-radius:  var(--radius-pill);
-  background:     rgba(255,255,255,0.2);
-  color:          rgba(255,255,255,0.85);
-}
-/* you-badge for non-turn my-pill */
-.player-pill.is-me:not(.is-turn) .you-badge {
-  background: var(--c-bg);
-  color:      var(--c-sub);
+  font-size:     8px;
+  font-weight:   500;
+  padding:       1px 5px;
+  border-radius: var(--radius-pill);
+  background:    var(--c-bg);
+  color:         var(--c-sub);
 }
 
 .player-pill-hp {
   display:     flex;
-  align-items: center;
-  gap:         5px;
+  align-items: baseline;
+  gap:         3px;
 }
 
-.player-hp-bar {
-  width:         52px;
-  height:        3px;
-  background:    var(--c-border);
-  border-radius: 2px;
-  overflow:      hidden;
-  flex-shrink:   0;
-}
-.player-pill.is-turn .player-hp-bar { background: rgba(255,255,255,0.25); }
-
-.player-hp-fill {
-  height:        100%;
-  background:    var(--c-green);
-  border-radius: 2px;
-  transition:    width 0.4s ease;
+/* Large HP number in pill */
+.player-hp-big {
+  font-size:   20px;
+  font-weight: 800;
+  line-height: 1;
+  color:       var(--c-text);
 }
 
-.player-hp-text {
+.player-hp-label {
   font-size:   9px;
   font-weight: 600;
   color:       var(--c-sub);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.player-pill.is-turn .player-hp-text { color: rgba(255,255,255,0.7); }
 
 /* HP ± controls (campaign mode only, inside the pill) */
 .player-hp-controls {
   display:     flex;
   gap:         2px;
-  margin-top:  1px;
+  margin-top:  2px;
 }
 .player-hp-controls .hp-ctrl-btn {
   padding:     1px 5px;
@@ -149,13 +136,6 @@
   line-height: 1.3;
   min-width:   22px;
   border-radius: 3px;
-}
-.player-pill.is-turn .hp-ctrl-btn {
-  border-color: rgba(255,255,255,0.4);
-  color:        rgba(255,255,255,0.85);
-}
-.player-pill.is-turn .hp-ctrl-btn:hover {
-  background: rgba(255,255,255,0.15);
 }
 
 /* Status dot / icon */
@@ -216,10 +196,19 @@
 }
 
 .opp-zone-hp {
-  display:     flex;
-  align-items: center;
-  gap:         4px;
-  flex-shrink: 0;
+  display:        flex;
+  align-items:    center;
+  flex-direction: column;
+  align-items:    flex-end;
+  gap:            2px;
+  flex-shrink:    0;
+}
+
+.opp-hp-big {
+  font-size:   18px;
+  font-weight: 800;
+  line-height: 1;
+  color:       var(--c-text);
 }
 
 .opp-hp-bar {
@@ -234,13 +223,6 @@
   height:     100%;
   background: var(--c-green);
   transition: width 0.4s ease;
-}
-
-.opp-hp-text {
-  font-size:   9px;
-  font-weight: 600;
-  color:       var(--c-sub);
-  white-space: nowrap;
 }
 
 .opp-zone-field {
@@ -363,20 +345,23 @@
 
 /* Nexus row in panel */
 .pp-nexus-card {
-  display:     flex;
-  align-items: center;
-  gap:         12px;
-  padding:     8px;
-  background:  var(--c-bg);
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       10px 12px;
+  background:    var(--c-bg);
   border-radius: var(--radius-sm);
 }
 
-.pp-nexus-icon {
-  width:  40px;
-  height: 48px;
+.pp-nexus-hp-display {
+  font-size:   44px;
+  font-weight: 900;
+  line-height: 1;
+  color:       var(--c-text);
   flex-shrink: 0;
+  min-width:   54px;
+  text-align:  center;
 }
-.pp-nexus-icon svg { width: 100%; height: 100%; }
 
 .pp-nexus-info {
   flex:           1;

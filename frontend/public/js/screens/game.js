@@ -338,7 +338,6 @@ function renderPlayersBar(gameState) {
     const isTurn      = gameState.currentTurn === username;
     const status      = p.status ?? 'active';
     const isEliminated = status === 'eliminated';
-    const hpPct       = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
     const canEditHp   = isCampaign && !isEliminated && (isMe || isGM);
 
     const pill = el('div',
@@ -354,8 +353,8 @@ function renderPlayersBar(gameState) {
         </div>
         ${isEliminated ? '' : `
         <div class="player-pill-hp">
-          <div class="player-hp-bar"><div class="player-hp-fill" style="width:${hpPct}%"></div></div>
-          <span class="player-hp-text">${p.nexus.hp}</span>
+          <span class="player-hp-big">${p.nexus.hp}</span>
+          <span class="player-hp-label">HP</span>
         </div>
         ${canEditHp ? `
         <div class="player-hp-controls">
@@ -397,7 +396,7 @@ function renderOpponentsArea(gameState) {
     const p = gameState.players[username];
     if (!p) continue;
 
-    const hpPct       = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+    const hpPct       = Math.min(100, Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100));
     const isActive    = gameState.currentTurn === username;
     const isEliminated = (p.status ?? 'active') === 'eliminated';
     const zone         = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}${isEliminated ? ' opp-zone--eliminated' : ''}`);
@@ -407,8 +406,8 @@ function renderOpponentsArea(gameState) {
       <div class="opp-zone-header">
         <span class="opp-zone-name">${escHtml(username)}</span>
         <div class="opp-zone-hp">
+          <span class="opp-hp-big">${p.nexus.hp}</span>
           <div class="opp-hp-bar"><div class="opp-hp-fill" style="width:${hpPct}%"></div></div>
-          <span class="opp-hp-text">♥ ${p.nexus.hp}</span>
         </div>
       </div>`;
 
@@ -502,23 +501,16 @@ function openPlayerPanel(username, gameState) {
   $('pp-avatar').textContent = username[0].toUpperCase();
   $('pp-name').textContent   = username;
 
-  // Nexus
-  const hpPct = Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100);
+  // Vita
+  const hpPct = Math.min(100, Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100));
   $('pp-nexus').innerHTML = `
     <div class="pp-nexus-card">
-      <div class="pp-nexus-icon">
-        <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2L4 9v13c0 10 7.2 19.4 16 22 8.8-2.6 16-12 16-22V9L20 2z"
-            fill="#E8E8E8" stroke="#BDBDBD" stroke-width="1.5"/>
-          <path d="M16 22l3 3 6-6" stroke="#606060" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
+      <div class="pp-nexus-hp-display">${p.nexus.hp}</div>
       <div class="pp-nexus-info">
         <div class="pp-nexus-hp-bar">
           <div class="pp-nexus-hp-fill" style="width:${hpPct}%"></div>
         </div>
-        <span class="pp-nexus-hp-text">♥ ${p.nexus.hp} / ${p.nexus.maxHp}</span>
+        <span class="pp-nexus-hp-text">${p.nexus.hp} / ${p.nexus.maxHp}</span>
       </div>
     </div>`;
 

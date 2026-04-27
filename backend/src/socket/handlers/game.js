@@ -567,7 +567,7 @@ function registerGameHandlers(io, socket) {
       const pState = gs.players[target];
       if (!pState) return socket.emit('error_msg', 'Giocatore non trovato');
       const d = Number(delta) || 0;
-      pState.nexus.hp = Math.max(0, Math.min(pState.nexus.maxHp, pState.nexus.hp + d));
+      pState.nexus.hp = Math.max(0, pState.nexus.hp + d);
       const log = `[${username}] ${target}: vita ${d >= 0 ? '+' : ''}${d} (ora ${pState.nexus.hp})`;
       return io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
     }
