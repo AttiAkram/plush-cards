@@ -3,11 +3,12 @@
  * Each player sees 3 artifact cards and picks one before the match starts.
  */
 
-import { $, el }         from '../utils/dom.js';
-import { on }            from '../events/emitter.js';
-import { showScreen }    from '../router/index.js';
-import { createCardEl }  from '../components/card.js';
-import { pickArtifact }  from '../socket/client.js';
+import { $, el }              from '../utils/dom.js';
+import { on }                 from '../events/emitter.js';
+import { showScreen }         from '../router/index.js';
+import { createCardEl }       from '../components/card.js';
+import { pickArtifact }       from '../socket/client.js';
+import { getState }           from '../state/store.js';
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,9 @@ function renderDraft(choices, waitingFor) {
 // ── Socket listeners ──────────────────────────────────────────────────────────
 
 function initSocketListeners() {
-  on('socket:draft_started', ({ choices, waitingFor }) => {
+  on('socket:draft_started', ({ allChoices, waitingFor }) => {
+    const { username } = getState();
+    const choices = allChoices?.[username] ?? [];
     renderDraft(choices, waitingFor);
   });
 

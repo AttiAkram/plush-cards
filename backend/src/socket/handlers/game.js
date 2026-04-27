@@ -178,17 +178,11 @@ function registerGameHandlers(io, socket) {
       if (choices.length === 0) room.draftPicks[uname] = null;
     }
 
-    console.log('[draft] room.players:', room.players.map(p => p.username));
-    console.log('[draft] store.sockets:', [...store.sockets.entries()].map(([sid, v]) => ({ sid: sid.slice(-6), ...v })));
-    for (const { username: uname } of room.players) {
-      const sid = findSocketId(uname);
-      console.log(`[draft] → ${uname}: sid=${sid ? sid.slice(-6) : 'NOT FOUND'}`);
-      if (!sid) continue;
-      io.to(sid).emit('draft_started', {
-        choices:    room.draftChoices[uname] ?? [],
-        waitingFor: allUsernames,
-      });
-    }
+    // Broadcast all choices at once — each client extracts its own from allChoices[username]
+    io.to(roomCode).emit('draft_started', {
+      allChoices: room.draftChoices,
+      waitingFor: allUsernames,
+    });
 
     const waitingFor = allUsernames.filter(u => !(u in room.draftPicks));
     if (waitingFor.length === 0) _finalizeDraft(io, room, roomCode);
