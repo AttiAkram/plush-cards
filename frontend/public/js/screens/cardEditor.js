@@ -8,6 +8,7 @@ import { $, el, escHtml }  from '../utils/dom.js';
 import * as api             from '../api/client.js';
 import { showToast }        from '../components/toast.js';
 import { effectToText }     from '../utils/effectText.js';
+import { createCardEl }     from '../components/card.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -51,8 +52,83 @@ export const ZONE_DESTINATIONS = [
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let _editId  = null;
-let _onSaved = null;
+let _editId    = null;
+let _onSaved   = null;
+let _imageData = null;   // base64 data URL or null
+
+// ── Live preview ──────────────────────────────────────────────────────────────
+
+function refreshPreview() {
+  const wrap = $('ce-card-preview');
+  if (!wrap) return;
+  const card = {
+    id:          $('ce-id')?.value.trim()   || 'preview',
+    name:        $('ce-name')?.value.trim() || 'Nome carta',
+    damage:      Number($('ce-damage')?.value) || 0,
+    hp:          Number($('ce-hp')?.value)     || 1,
+    rarity:      $('ce-rarity')?.value         || 'comune',
+    type:        $('ce-type')?.value           || 'personaggio',
+    description: $('ce-description')?.value    || '',
+    image:       _imageData,
+  };
+  wrap.innerHTML = '';
+  wrap.appendChild(createCardEl(card));
+}
+
+// ── Image upload ──────────────────────────────────────────────────────────────
+
+function setImageData(dataUrl) {
+  _imageData = dataUrl || null;
+  const placeholder = $('ce-image-placeholder');
+  const chosen      = $('ce-image-chosen');
+  const preview     = $('ce-image-preview');
+  if (_imageData) {
+    placeholder?.classList.add('hidden');
+    chosen?.classList.remove('hidden');
+    if (preview) preview.src = _imageData;
+  } else {
+    placeholder?.classList.remove('hidden');
+    chosen?.classList.add('hidden');
+    if (preview) preview.src = '';
+  }
+  refreshPreview();
+}
+
+function initImageUpload() {
+  const zone   = $('ce-image-zone');
+  const input  = $('ce-image-input');
+  const remove = $('ce-image-remove');
+  if (!zone || !input) return;
+
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Immagine troppo grande (max 2 MB)', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => setImageData(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') input.click(); });
+  input.addEventListener('change', () => { if (input.files[0]) loadFile(input.files[0]); });
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  remove?.addEventListener('click', e => {
+    e.stopPropagation();
+    input.value = '';
+    setImageData(null);
+  });
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -211,6 +287,9 @@ function clearForm() {
   $('ce-role').value        = 'neutro';
   $('ce-effects-list').innerHTML = '';
   $('ce-error').textContent = '';
+  const input = $('ce-image-input');
+  if (input) input.value = '';
+  setImageData(null);
 }
 
 export function openCardEditor(card, onSaved) {
@@ -235,8 +314,10 @@ export function openCardEditor(card, onSaved) {
     for (const eff of card.effects ?? []) {
       $('ce-effects-list').appendChild(buildEffectRow(eff));
     }
+    setImageData(card.image ?? null);
   } else {
     $('ce-id').disabled = false;
+    refreshPreview();
   }
 
   $('card-editor-panel').classList.remove('hidden');
@@ -286,9 +367,9 @@ async function saveCard() {
   try {
     let res;
     if (_editId) {
-      res = await api.put(`/api/admin/cards/${_editId}`, { name, damage, hp, rarity, type, active, description, tags, role, effects });
+      res = await api.put(`/api/admin/cards/${_editId}`, { name, damage, hp, rarity, type, active, description, tags, role, effects, image: _imageData });
     } else {
-      res = await api.post('/api/admin/cards', { id, name, damage, hp, rarity, type, description, tags, role, effects });
+      res = await api.post('/api/admin/cards', { id, name, damage, hp, rarity, type, description, tags, role, effects, image: _imageData });
     }
     if (res.error) { errorEl.textContent = res.error; return; }
     showToast(_editId ? 'Carta aggiornata' : 'Carta creata');
@@ -309,4 +390,13 @@ export function initCardEditor() {
   $('btn-add-effect').addEventListener('click', () => {
     $('ce-effects-list').appendChild(buildEffectRow());
   });
+
+  initImageUpload();
+
+  // Live card preview on field changes
+  const previewFields = ['ce-id', 'ce-name', 'ce-damage', 'ce-hp', 'ce-rarity', 'ce-type', 'ce-description'];
+  for (const id of previewFields) {
+    $(`${id}`)?.addEventListener('input',  refreshPreview);
+    $(`${id}`)?.addEventListener('change', refreshPreview);
+  }
 }

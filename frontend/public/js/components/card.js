@@ -63,7 +63,9 @@ export function createCardEl(card) {
 
   div.innerHTML = `
     <div class="card-image-area">
-      <div class="creature-art">${creatureArtHtml(card.id)}</div>
+      ${card.image
+        ? `<img class="card-art-img" src="${card.image}" alt="">`
+        : `<div class="creature-art">${creatureArtHtml(card.id)}</div>`}
       ${markerHtml ? `<div class="card-markers">${markerHtml}</div>` : ''}
     </div>
     <div class="card-name">${escHtml(card.name)}</div>

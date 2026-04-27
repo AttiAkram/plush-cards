@@ -871,95 +871,127 @@
 <div id="card-editor-panel" class="card-editor-panel hidden" role="dialog" aria-modal="true">
   <div class="card-editor-overlay" id="card-editor-overlay"></div>
   <div class="card-editor-box">
+
     <div class="card-editor-header">
       <span id="card-editor-title">Nuova Carta</span>
-      <button class="card-editor-close" id="card-editor-close" aria-label="Chiudi">✕</button>
+      <button class="card-editor-close" id="card-editor-close" aria-label="Chiudi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
     </div>
-    <div class="card-editor-body">
 
-      <!-- Base fields -->
-      <div class="ce-section-label">Informazioni base</div>
-      <div class="ce-row">
-        <div class="field-group ce-field-half">
-          <label for="ce-id">ID univoco</label>
-          <input id="ce-id" type="text" placeholder="es. drago_fuoco" maxlength="32">
+    <!-- Two-column layout -->
+    <div class="card-editor-content">
+
+      <!-- Left: preview + image upload -->
+      <div class="ce-left-col">
+        <div class="ce-left-section">
+          <div class="ce-section-label">Anteprima</div>
+          <div id="ce-card-preview" class="ce-card-preview-wrap"></div>
         </div>
-        <div class="field-group ce-field-half">
-          <label for="ce-name">Nome</label>
-          <input id="ce-name" type="text" placeholder="Nome carta" maxlength="40">
-        </div>
-      </div>
-      <div class="ce-row">
-        <div class="field-group ce-field-third">
-          <label for="ce-type">Tipo</label>
-          <select id="ce-type" class="select-input">
-            <option value="personaggio">Personaggio</option>
-            <option value="artefatto">Artefatto</option>
-          </select>
-        </div>
-        <div class="field-group ce-field-third">
-          <label for="ce-rarity">Rarità</label>
-          <select id="ce-rarity" class="select-input">
-            <option value="comune">Comune</option>
-            <option value="raro">Raro</option>
-            <option value="epico">Epico</option>
-            <option value="mitico">Mitico</option>
-            <option value="leggendario">Leggendario</option>
-          </select>
-        </div>
-        <div class="field-group ce-field-third">
-          <label>&nbsp;</label>
-          <label class="ce-toggle-row">
-            <input type="checkbox" id="ce-active">
-            <span class="ce-toggle-label">Attiva (in gioco)</span>
-          </label>
-        </div>
-      </div>
-      <div class="ce-row">
-        <div class="field-group ce-field-half">
-          <label for="ce-damage">Attacco</label>
-          <input id="ce-damage" type="number" min="0" max="99" value="1">
-        </div>
-        <div class="field-group ce-field-half">
-          <label for="ce-hp">Vita</label>
-          <input id="ce-hp" type="number" min="1" max="999" value="1">
-        </div>
-      </div>
-      <div class="field-group">
-        <label for="ce-description">Descrizione</label>
-        <textarea id="ce-description" rows="2" placeholder="Testo descrittivo della carta…" maxlength="280"></textarea>
-      </div>
-      <div class="ce-row">
-        <div class="field-group ce-field-half">
-          <label for="ce-tags">Tag / Famiglia</label>
-          <input id="ce-tags" type="text" placeholder="orso, fuoco, curatore…" maxlength="120">
-        </div>
-        <div class="field-group ce-field-half">
-          <label for="ce-role">Ruolo (design)</label>
-          <select id="ce-role" class="select-input">
-            <option value="neutro">Neutro</option>
-            <option value="aggro">Aggro</option>
-            <option value="difesa">Difesa</option>
-            <option value="valore">Valore (draw/resource)</option>
-            <option value="controllo">Controllo</option>
-          </select>
+        <div class="ce-left-section">
+          <div class="ce-section-label">Immagine</div>
+          <div id="ce-image-zone" class="ce-image-zone" tabindex="0" role="button" aria-label="Carica immagine">
+            <input type="file" id="ce-image-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+            <div id="ce-image-placeholder" class="ce-image-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" style="opacity:.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Trascina o clicca per caricare</span>
+              <span class="ce-image-hint">PNG · JPG · WebP · max 2 MB</span>
+            </div>
+            <div id="ce-image-chosen" class="ce-image-chosen hidden">
+              <img id="ce-image-preview" class="ce-image-preview-img" src="" alt="">
+              <button type="button" class="ce-image-remove" id="ce-image-remove">Rimuovi</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Effects -->
-      <div class="ce-section-label ce-effects-label">
-        Effetti
-        <button class="btn btn-sm btn-outline" id="btn-add-effect" type="button">+ Aggiungi</button>
-      </div>
-      <div id="ce-effects-list" class="ce-effects-list"></div>
+      <!-- Right: form fields (scrollable) -->
+      <div class="ce-right-col">
+        <div class="ce-section-label">Informazioni base</div>
+        <div class="ce-row">
+          <div class="field-group ce-field-half">
+            <label for="ce-id">ID univoco</label>
+            <input id="ce-id" type="text" placeholder="es. drago_fuoco" maxlength="32">
+          </div>
+          <div class="field-group ce-field-half">
+            <label for="ce-name">Nome</label>
+            <input id="ce-name" type="text" placeholder="Nome carta" maxlength="40">
+          </div>
+        </div>
+        <div class="ce-row">
+          <div class="field-group ce-field-third">
+            <label for="ce-type">Tipo</label>
+            <select id="ce-type" class="select-input">
+              <option value="personaggio">Personaggio</option>
+              <option value="artefatto">Artefatto</option>
+            </select>
+          </div>
+          <div class="field-group ce-field-third">
+            <label for="ce-rarity">Rarità</label>
+            <select id="ce-rarity" class="select-input">
+              <option value="comune">Comune</option>
+              <option value="raro">Raro</option>
+              <option value="epico">Epico</option>
+              <option value="mitico">Mitico</option>
+              <option value="leggendario">Leggendario</option>
+            </select>
+          </div>
+          <div class="field-group ce-field-third">
+            <label>&nbsp;</label>
+            <label class="ce-toggle-row">
+              <input type="checkbox" id="ce-active">
+              <span class="ce-toggle-label">Attiva</span>
+            </label>
+          </div>
+        </div>
+        <div class="ce-row">
+          <div class="field-group ce-field-half">
+            <label for="ce-damage">Attacco</label>
+            <input id="ce-damage" type="number" min="0" max="99" value="1">
+          </div>
+          <div class="field-group ce-field-half">
+            <label for="ce-hp">Vita</label>
+            <input id="ce-hp" type="number" min="1" max="999" value="1">
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="ce-description">Descrizione</label>
+          <textarea id="ce-description" rows="2" placeholder="Testo descrittivo della carta…" maxlength="280"></textarea>
+        </div>
+        <div class="ce-row">
+          <div class="field-group ce-field-half">
+            <label for="ce-tags">Tag / Famiglia</label>
+            <input id="ce-tags" type="text" placeholder="orso, fuoco, curatore…" maxlength="120">
+          </div>
+          <div class="field-group ce-field-half">
+            <label for="ce-role">Ruolo (design)</label>
+            <select id="ce-role" class="select-input">
+              <option value="neutro">Neutro</option>
+              <option value="aggro">Aggro</option>
+              <option value="difesa">Difesa</option>
+              <option value="valore">Valore (draw/resource)</option>
+              <option value="controllo">Controllo</option>
+            </select>
+          </div>
+        </div>
 
-      <!-- Error -->
-      <div id="ce-error" class="error-msg"></div>
+        <div class="ce-section-label ce-effects-label">
+          Effetti
+          <button class="btn btn-sm btn-outline" id="btn-add-effect" type="button">+ Aggiungi</button>
+        </div>
+        <div id="ce-effects-list" class="ce-effects-list"></div>
+        <div id="ce-error" class="error-msg"></div>
+      </div>
     </div>
+
     <div class="card-editor-footer">
       <button class="btn btn-outline" id="btn-ce-cancel">Annulla</button>
-      <button class="btn btn-primary btn-bounce" id="btn-ce-save">Salva</button>
+      <button class="btn btn-primary btn-bounce" id="btn-ce-save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salva carta
+      </button>
     </div>
+
   </div>
 </div>
 

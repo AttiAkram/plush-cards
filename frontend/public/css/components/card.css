@@ -54,6 +54,14 @@
 
 .card-image-area .creature-art svg { width: 55%; height: 55%; opacity: 0.8; }
 
+.card-art-img {
+  width:         100%;
+  height:        100%;
+  object-fit:    cover;
+  border-radius: 4px;
+  display:       block;
+}
+
 .card-name {
   font-size:     9px;
   font-weight:   600;

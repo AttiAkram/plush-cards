@@ -91,7 +91,7 @@ router.get('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
 
 // ── POST /api/admin/cards — create a new card ─────────────────────────────────
 router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => {
-  const { id, name, damage, hp, rarity, type = 'personaggio', description = '', effects = [], tags = [], role = 'neutro' } = req.body;
+  const { id, name, damage, hp, rarity, type = 'personaggio', description = '', effects = [], tags = [], role = 'neutro', image } = req.body;
 
   if (!id || !name)
     return res.status(400).json({ error: 'id e name sono obbligatori' });
@@ -116,6 +116,7 @@ router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => 
     tags:        Array.isArray(tags) ? tags : [],
     role:        role || 'neutro',
     effects:     Array.isArray(effects) ? effects : [],
+    image:       image || null,
   };
 
   cards.set(id, card);
@@ -127,7 +128,7 @@ router.put('/cards/:id', authenticate, requireRole('root', 'admin'), (req, res) 
   const card = cards.get(req.params.id);
   if (!card) return res.status(404).json({ error: 'Carta non trovata' });
 
-  const { name, damage, hp, rarity, type, description, effects, active, tags, role } = req.body;
+  const { name, damage, hp, rarity, type, description, effects, active, tags, role, image } = req.body;
   if (name        !== undefined) card.name        = name;
   if (damage      !== undefined) card.damage      = Number(damage) || 0;
   if (hp          !== undefined) card.hp          = Number(hp) || 1;
@@ -138,6 +139,7 @@ router.put('/cards/:id', authenticate, requireRole('root', 'admin'), (req, res) 
   if (active      !== undefined) card.active      = Boolean(active);
   if (tags        !== undefined) card.tags        = Array.isArray(tags) ? tags : [];
   if (role        !== undefined) card.role        = role || 'neutro';
+  if (image       !== undefined) card.image       = image || null;
 
   res.json(card);
 });
