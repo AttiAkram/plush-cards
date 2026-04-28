@@ -58,7 +58,8 @@ let currentValidSlots = [];
 
 // ── Attack mode state ─────────────────────────────────────────────────────────
 
-let _attackModeCard = null;   // { uid, name, ... } card selected as attacker
+let _attackModeCard  = null;   // { uid, name, ... } card selected as attacker
+let _focusedOpponent = null;   // username of the opponent shown on mobile
 const _prevNexusHp = new Map();  // username → previous HP value for pop animation
 
 // ── Touch state ───────────────────────────────────────────────────────────────
@@ -401,17 +402,43 @@ function renderPlayersBar(gameState) {
 function renderOpponentsArea(gameState) {
   const area   = $('opponents-area');
   area.innerHTML = '';
-  const myName = getState().username;
+  const myName   = getState().username;
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
-  for (const username of Object.keys(gameState.players)) {
-    if (username === myName) continue;
+  // Collect opponent usernames (in order)
+  const opponents = Object.keys(gameState.players).filter(u => u !== myName && gameState.players[u]);
+
+  // Auto-set focus to first opponent if current focus is gone
+  if (!opponents.includes(_focusedOpponent)) _focusedOpponent = opponents[0] ?? null;
+
+  // Populate focus strip (mobile only)
+  const strip = $('opp-focus-strip');
+  if (strip) {
+    strip.innerHTML = '';
+    if (isMobile) {
+      opponents.forEach(uname => {
+        const p     = gameState.players[uname];
+        const pill  = el('button', `opp-focus-pill${uname === _focusedOpponent ? ' active' : ''}`);
+        pill.type   = 'button';
+        pill.innerHTML = `<span class="pill-avatar">${escHtml(uname[0].toUpperCase())}</span>${escHtml(uname)}`;
+        pill.addEventListener('click', () => {
+          _focusedOpponent = uname;
+          renderOpponentsArea(getState().gameState);
+        });
+        strip.appendChild(pill);
+      });
+    }
+  }
+
+  for (const username of opponents) {
     const p = gameState.players[username];
     if (!p) continue;
 
     const hpPct       = Math.min(100, Math.max(0, (p.nexus.hp / p.nexus.maxHp) * 100));
     const isActive    = gameState.currentTurn === username;
     const isEliminated = (p.status ?? 'active') === 'eliminated';
-    const zone         = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}${isEliminated ? ' opp-zone--eliminated' : ''}`);
+    const isFocused    = username === _focusedOpponent;
+    const zone         = el('div', `opp-zone${isActive ? ' opp-zone--active' : ''}${isEliminated ? ' opp-zone--eliminated' : ''}${isFocused ? ' opp-focus' : ''}`);
 
     // Header: name + HP bar
     zone.innerHTML = `
@@ -957,6 +984,7 @@ function initFieldDropZones() {
     clearSlotHighlights();
     if (!currentValidSlots.includes(i)) return;
     playCard(draggingCardUid, i);
+    closeHandTuck();
     draggingCardUid = null;
   });
 }
@@ -1032,7 +1060,7 @@ function initTouchDrag() {
       clearSlotHighlights();
       if (slotEl) {
         const i = parseInt(slotEl.dataset.slot, 10);
-        if (currentValidSlots.includes(i)) playCard(draggingCardUid, i);
+        if (currentValidSlots.includes(i)) { playCard(draggingCardUid, i); closeHandTuck(); }
       }
       draggingCardUid = null;
     } else {
@@ -1069,6 +1097,7 @@ function initTouchDrag() {
     const uid = _tapSelectUid;
     exitTapSelectMode();
     playCard(uid, i);
+    closeHandTuck();
   });
 
   // ── Document click: cancel tap-select when tapping outside hand/field ────────
@@ -1342,6 +1371,33 @@ function initGameActions() {
   initHandDrag();
   initFieldDropZones();
   initTouchDrag();
+  initHandTuck();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MOBILE — HAND TUCK DRAWER
+// ──────────────────────────────────────────────────────────────────────────────
+
+function closeHandTuck() {
+  $('hand-area')?.classList.remove('tuck-open');
+  $('hand-tuck-backdrop')?.classList.remove('visible');
+}
+
+function openHandTuck() {
+  $('hand-area')?.classList.add('tuck-open');
+  $('hand-tuck-backdrop')?.classList.add('visible');
+}
+
+function initHandTuck() {
+  const handle   = $('hand-tuck-handle');
+  const backdrop = $('hand-tuck-backdrop');
+  if (!handle || !backdrop) return;
+
+  handle.addEventListener('click', () => {
+    const isOpen = $('hand-area')?.classList.contains('tuck-open');
+    isOpen ? closeHandTuck() : openHandTuck();
+  });
+  backdrop.addEventListener('click', closeHandTuck);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -1112,9 +1112,75 @@
   font-style: italic;
 }
 
-/* ── Responsive ─────────────────────────────── */
-@media (max-width: 600px) {
-  .game-board { padding: 5px; gap: 4px; }
+/* ── Opponent focus strip (hidden on desktop/tablet) ────────── */
+.opp-focus-strip { display: none; }
+
+/* ── Hand tuck elements (hidden on desktop/tablet) ──────────── */
+.hand-tuck-handle   { display: none; }
+.hand-tuck-backdrop { display: none; }
+
+/* ── Mobile (≤767px) — tuck hand + single-opponent focus ────── */
+@media (max-width: 767px) {
+  /* Board: keep grid but add bottom padding for tuck peek */
+  .game-board {
+    padding:              5px 5px calc(var(--hand-peek, 60px) + 4px) 5px;
+    gap:                  4px;
+    grid-template-rows:   auto auto auto auto 1fr;
+  }
+
+  /* Focus strip: horizontal scroll row of avatar pills */
+  .opp-focus-strip {
+    display:     flex;
+    gap:         6px;
+    padding:     2px 4px;
+    overflow-x:  auto;
+    align-items: center;
+    min-height:  32px;
+  }
+  .opp-focus-pill {
+    display:         flex;
+    align-items:     center;
+    gap:             4px;
+    padding:         4px 8px;
+    border-radius:   20px;
+    border:          1.5px solid var(--c-border);
+    background:      var(--c-white);
+    font-size:       11px;
+    font-weight:     500;
+    cursor:          pointer;
+    white-space:     nowrap;
+    transition:      border-color var(--t-fast), background var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .opp-focus-pill.active {
+    border-color: var(--c-text);
+    background:   var(--c-text);
+    color:        var(--c-white);
+  }
+  .opp-focus-pill .pill-avatar {
+    width:           20px;
+    height:          20px;
+    border-radius:   50%;
+    background:      var(--c-border);
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    font-size:       10px;
+    font-weight:     700;
+  }
+  .opp-focus-pill.active .pill-avatar {
+    background: rgba(255,255,255,0.25);
+  }
+
+  /* Opponents area: hide all zones except the focused one */
+  .opponents-area {
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+  .opp-zone             { display: none; }
+  .opp-zone.opp-focus   { display: flex; flex-direction: column; }
+
+  /* Compact center bar */
   .center-bar { gap: 8px; }
   .hand-cards { gap: 4px; }
   .field-row  { gap: 5px; }
@@ -1122,15 +1188,82 @@
   .zone-stacks { gap: 5px; }
   .zone-stack { padding: 4px 6px; min-width: 36px; }
 
-  /* Larger touch targets for droppable slots on mobile */
+  /* Larger touch targets for droppable slots */
   .field-slot.droppable,
   .field-slot.drag-over {
     transform: scale(1.1);
   }
+
+  /* ── Hand tuck drawer ──────────────────────────────────────── */
+  #hand-area {
+    position:      fixed;
+    bottom:        0;
+    left:          0;
+    right:         0;
+    z-index:       50;
+    background:    var(--c-white);
+    border-top:    1.5px solid var(--c-border);
+    border-radius: 14px 14px 0 0;
+    padding:       0 8px max(8px, env(safe-area-inset-bottom));
+    transform:     translateY(calc(100% - var(--hand-peek, 60px)));
+    transition:    transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow:    0 -4px 24px rgba(0,0,0,0.1);
+    max-height:    80vh;
+    overflow:      hidden;
+    display:       flex;
+    flex-direction: column;
+  }
+  #hand-area.tuck-open {
+    transform: translateY(0);
+  }
+
+  /* Handle bar — visible peek strip */
+  .hand-tuck-handle {
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    height:          var(--hand-peek, 60px);
+    flex-shrink:     0;
+    cursor:          pointer;
+    user-select:     none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hand-tuck-handle::before {
+    content:       '';
+    width:         36px;
+    height:        4px;
+    border-radius: 2px;
+    background:    var(--c-border);
+  }
+
+  /* Backdrop overlay */
+  .hand-tuck-backdrop {
+    display:    none;
+    position:   fixed;
+    inset:      0;
+    background: rgba(0,0,0,0.22);
+    z-index:    49;
+  }
+  .hand-tuck-backdrop.visible {
+    display: block;
+  }
+
+  /* Hand cards inside tuck — allow vertical scroll if many cards */
+  #hand-area .hand-cards {
+    flex:       1;
+    overflow-x: auto;
+    padding:    4px 0 8px;
+  }
+}
+
+/* ── Tablet (768–1023px) — compact but no tuck ──────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .game-board { padding: 6px; gap: 4px; }
+  .center-bar { gap: 8px; }
 }
 
 @media (max-width: 380px) {
-  .game-board { padding: 4px; gap: 3px; }
+  .game-board { padding: 4px 4px calc(var(--hand-peek, 60px) + 2px) 4px; gap: 3px; }
 }
 
 /* ── Eliminated player badge & pill ─────────── */

@@ -573,6 +573,9 @@
       <!-- player pills injected by JS -->
     </div>
 
+    <!-- ── Opponent focus strip (mobile only — avatar pills to switch focus) -->
+    <div id="opp-focus-strip" class="opp-focus-strip"></div>
+
     <!-- ── Row 2: Opponents' fields (always visible) ────────────── -->
     <div class="opponents-area" id="opponents-area">
       <!-- opponent zones injected by JS -->
@@ -630,6 +633,9 @@
       </div>
     </div>
 
+    <!-- Tuck backdrop (mobile only — tap to close hand drawer) -->
+    <div id="hand-tuck-backdrop" class="hand-tuck-backdrop"></div>
+
     <!-- Player area -->
     <div class="player-area" id="player-area">
       <!-- Field slots -->
@@ -682,8 +688,9 @@
         </div>
       </div>
 
-      <!-- Hand -->
-      <div class="hand-area">
+      <!-- Hand (becomes fixed tuck drawer on mobile) -->
+      <div class="hand-area" id="hand-area">
+        <div id="hand-tuck-handle" class="hand-tuck-handle"></div>
         <p class="hand-label">La tua mano</p>
         <div id="player-hand" class="hand-cards"></div>
       </div>
