@@ -18,7 +18,8 @@ import { endTurn, playCard, requestValidSlots,
          leaveMatch, attack, discardCard,
          manualEdit, sendGmNote, requestDeck,
          saveSession, restoreSession, gmRandom,
-         rollDice, drawCard, getArtifact }         from '../socket/client.js';
+         rollDice, drawCard, getArtifact,
+         swapArtifact }                            from '../socket/client.js';
 import { showToast }                              from '../components/toast.js';
 
 // ── Error messages ────────────────────────────────────────────────────────────
@@ -705,6 +706,11 @@ function openCardModal(card) {
   $('master-tools').classList.toggle('hidden', !canUseMT);
   if (canUseMT) _renderMasterTools(card, gameState, username);
 
+  // "Cambia artefatto" — campaign only, own artifact slot only
+  const isMyArtifact = !!gameState?.players[username]?.artifactSlot &&
+                       gameState.players[username].artifactSlot.uid === card.uid;
+  $('card-modal-swap-artifact').classList.toggle('hidden', !(isCampaign && isMyArtifact));
+
   $('card-modal').classList.remove('hidden');
 }
 
@@ -1262,6 +1268,11 @@ function initGameActions() {
     if (card) discardCard(card.uid);
   });
 
+  $('card-modal-swap-artifact').addEventListener('click', () => {
+    closeCardModal();
+    swapArtifact();
+  });
+
   // Cancel attack mode button
   $('btn-cancel-attack').addEventListener('click', exitAttackMode);
 
@@ -1378,15 +1389,21 @@ function initGameActions() {
 // MOBILE — HAND TUCK DRAWER
 // ──────────────────────────────────────────────────────────────────────────────
 
-function closeHandTuck() {
-  $('hand-area')?.classList.remove('tuck-open');
-  $('hand-tuck-backdrop')?.classList.remove('visible');
+function setHandView(view) {
+  const ha = $('hand-area');
+  const bd = $('hand-tuck-backdrop');
+  ha?.classList.remove('tuck-mano', 'tuck-campo');
+  if (view) {
+    ha?.classList.add(`tuck-${view}`);
+    bd?.classList.add('visible');
+    document.querySelectorAll('.hvt-btn').forEach(b =>
+      b.classList.toggle('hvt-active', b.dataset.view === view));
+  } else {
+    bd?.classList.remove('visible');
+  }
 }
 
-function openHandTuck() {
-  $('hand-area')?.classList.add('tuck-open');
-  $('hand-tuck-backdrop')?.classList.add('visible');
-}
+function closeHandTuck() { setHandView(null); }
 
 function initHandTuck() {
   const handle   = $('hand-tuck-handle');
@@ -1394,10 +1411,18 @@ function initHandTuck() {
   if (!handle || !backdrop) return;
 
   handle.addEventListener('click', () => {
-    const isOpen = $('hand-area')?.classList.contains('tuck-open');
-    isOpen ? closeHandTuck() : openHandTuck();
+    const ha     = $('hand-area');
+    const isOpen = ha?.classList.contains('tuck-mano') || ha?.classList.contains('tuck-campo');
+    isOpen ? closeHandTuck() : setHandView('mano');
   });
   backdrop.addEventListener('click', closeHandTuck);
+
+  document.querySelectorAll('.hvt-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      setHandView(btn.dataset.view);
+    });
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

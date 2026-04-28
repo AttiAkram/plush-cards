@@ -195,3 +195,7 @@ export function drawCard() {
 export function getArtifact() {
   getSocket()?.emit('get_artifact');
 }
+
+export function swapArtifact() {
+  getSocket()?.emit('swap_artifact');
+}

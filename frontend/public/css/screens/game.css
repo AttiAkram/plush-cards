@@ -1118,6 +1118,7 @@
 /* ── Hand tuck elements (hidden on desktop/tablet) ──────────── */
 .hand-tuck-handle   { display: none; }
 .hand-tuck-backdrop { display: none; }
+.hand-view-toggle   { display: none; }
 
 /* ── Mobile (≤767px) — tuck hand + single-opponent focus ────── */
 @media (max-width: 767px) {
@@ -1194,30 +1195,42 @@
     transform: scale(1.1);
   }
 
-  /* ── Hand tuck drawer ──────────────────────────────────────── */
-  #hand-area {
-    position:      fixed;
-    bottom:        0;
-    left:          0;
-    right:         0;
-    z-index:       50;
-    background:    var(--c-white);
-    border-top:    1.5px solid var(--c-border);
-    border-radius: 14px 14px 0 0;
-    padding:       0 8px max(8px, env(safe-area-inset-bottom));
-    transform:     translateY(calc(100% - var(--hand-peek, 60px)));
-    transition:    transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow:    0 -4px 24px rgba(0,0,0,0.1);
-    max-height:    80vh;
-    overflow:      hidden;
-    display:       flex;
-    flex-direction: column;
-  }
-  #hand-area.tuck-open {
-    transform: translateY(0);
+  /* ── End-turn button: move to top-right on mobile ─────────── */
+  .btn-end-turn {
+    position:  fixed;
+    bottom:    auto;
+    top:       8px;
+    right:     52px;
+    z-index:   60;
+    padding:   6px 14px;
+    font-size: 12px;
   }
 
-  /* Handle bar — visible peek strip */
+  /* ── Hand tuck drawer ──────────────────────────────────────── */
+  #hand-area {
+    position:       fixed;
+    bottom:         0;
+    left:           0;
+    right:          0;
+    z-index:        50;
+    background:     var(--c-white);
+    border-top:     1.5px solid var(--c-border);
+    border-radius:  14px 14px 0 0;
+    padding:        0 8px max(8px, env(safe-area-inset-bottom));
+    transform:      translateY(calc(100% - var(--hand-peek, 60px)));
+    transition:     transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow:     0 -4px 24px rgba(0,0,0,0.1);
+    max-height:     80vh;
+    overflow:       hidden;
+    display:        flex;
+    flex-direction: column;
+  }
+  /* "Mano" state: hand rises high, showing only cards */
+  #hand-area.tuck-mano { transform: translateY(0); }
+  /* "Campo" state: hand at ~42vh, field + nexus visible above */
+  #hand-area.tuck-campo { transform: translateY(calc(100% - 42vh)); }
+
+  /* Handle bar — always the visible 60px peek strip */
   .hand-tuck-handle {
     display:         flex;
     align-items:     center;
@@ -1236,6 +1249,34 @@
     background:    var(--c-border);
   }
 
+  /* ── View toggle (Campo / Mano) — visible only when drawer open ── */
+  .hand-view-toggle {
+    display:         none;  /* shown via JS class below */
+    justify-content: center;
+    gap:             6px;
+    padding:         4px 0 6px;
+    flex-shrink:     0;
+  }
+  #hand-area.tuck-mano .hand-view-toggle,
+  #hand-area.tuck-campo .hand-view-toggle { display: flex; }
+
+  .hvt-btn {
+    padding:       5px 18px;
+    border-radius: 20px;
+    border:        1.5px solid var(--c-border);
+    background:    transparent;
+    font-size:     12px;
+    font-weight:   500;
+    cursor:        pointer;
+    transition:    background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hvt-btn.hvt-active {
+    background:   var(--c-text);
+    border-color: var(--c-text);
+    color:        var(--c-white);
+  }
+
   /* Backdrop overlay */
   .hand-tuck-backdrop {
     display:    none;
@@ -1244,11 +1285,9 @@
     background: rgba(0,0,0,0.22);
     z-index:    49;
   }
-  .hand-tuck-backdrop.visible {
-    display: block;
-  }
+  .hand-tuck-backdrop.visible { display: block; }
 
-  /* Hand cards inside tuck — allow vertical scroll if many cards */
+  /* Hand cards inside tuck */
   #hand-area .hand-cards {
     flex:       1;
     overflow-x: auto;

@@ -691,6 +691,11 @@
       <!-- Hand (becomes fixed tuck drawer on mobile) -->
       <div class="hand-area" id="hand-area">
         <div id="hand-tuck-handle" class="hand-tuck-handle"></div>
+        <!-- Toggle: Campo / Mano (mobile only, visible when drawer is open) -->
+        <div class="hand-view-toggle" id="hand-view-toggle">
+          <button class="hvt-btn" data-view="campo">Campo</button>
+          <button class="hvt-btn" data-view="mano">Mano</button>
+        </div>
         <p class="hand-label">La tua mano</p>
         <div id="player-hand" class="hand-cards"></div>
       </div>
@@ -849,6 +854,7 @@
       <button class="btn btn-primary card-modal-play hidden" id="card-modal-play">Gioca</button>
       <button class="btn btn-danger card-modal-attack hidden" id="card-modal-attack">Attacca</button>
       <button class="btn btn-outline card-modal-discard hidden" id="card-modal-discard">Scarta</button>
+      <button class="btn btn-outline card-modal-swap hidden" id="card-modal-swap-artifact">↺ Cambia artefatto</button>
     </div>
 
     <!-- Master Tools: visible in campaign mode for GM / card owner -->

@@ -262,6 +262,40 @@ function registerGameHandlers(io, socket) {
     io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
   });
 
+  // ── swap_artifact ─────────────────────────────────────────────────────────────
+  // Campaign only: player swaps their current artifact for a new random one.
+  // Nexus HP is preserved; the new artifact inherits the current nexus HP/maxHp.
+
+  socket.on('swap_artifact', () => {
+    const { room, roomCode, gs } = getRoomAndState();
+    if (!room || room.status !== 'playing') return;
+    if (room.mode !== 'campaign') return;
+
+    const pState = gs?.players[username];
+    if (!pState) return;
+
+    // Exclude artifact IDs already assigned to OTHER players (own can be replaced)
+    const usedIds = new Set(
+      Object.entries(gs.players)
+        .filter(([u, p]) => u !== username && p.artifactSlot)
+        .map(([, p]) => p.artifactSlot.id)
+    );
+
+    const available = createArtifactPool().filter(a => !usedIds.has(a.id));
+    if (available.length === 0) {
+      return socket.emit('error_msg', 'Nessun artefatto disponibile nel pool');
+    }
+
+    const oldName = pState.artifactSlot?.name ?? '—';
+    const artifact     = available[Math.floor(Math.random() * available.length)];
+    artifact.currentHp = pState.nexus.hp;
+    artifact.hp        = pState.nexus.maxHp;
+    pState.artifactSlot = artifact;
+
+    const log = `${username} cambia artefatto: ${oldName} → ${artifact.name}`;
+    io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
+  });
+
   // ── end_turn ─────────────────────────────────────────────────────────────────
 
   socket.on('end_turn', () => {
