@@ -431,26 +431,29 @@
 /* ─────────────────────────────────────────────
    ROW 3 — Center bar
    ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   CENTER BAR — 3-column control bar
+   [turn info]  [end-turn button]  [icon cluster]
+   ───────────────────────────────────────────── */
 .center-bar {
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  gap:             14px;
-  padding:         4px 0;
-  flex-wrap:       wrap;
+  display:               grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:           center;
+  gap:                   8px;
+  padding:               5px 10px;
+  background:            var(--c-white);
+  border-radius:         var(--radius);
+  border:                1px solid var(--c-border);
 }
 
-/* Turn badge */
+/* Left: turn info */
 .turn-badge {
-  background:     var(--c-white);
-  border:         1px solid var(--c-border);
-  border-radius:  var(--radius);
-  padding:        5px 14px;
-  text-align:     center;
   display:        flex;
   flex-direction: column;
   gap:            1px;
   transition:     background var(--t-fast), border-color var(--t-fast);
+  padding:        3px 6px;
+  border-radius:  var(--radius-sm);
 }
 
 #turn-number {
@@ -464,72 +467,51 @@
   color:       var(--c-sub);
 }
 
-/* My-turn highlight */
-.turn-badge.my-turn                { background: var(--c-text); border-color: var(--c-text); }
-.turn-badge.my-turn #turn-number   { color: #fff; }
-.turn-badge.my-turn #turn-player   { color: rgba(255,255,255,0.7); }
+/* My-turn highlight: left block goes dark */
+.turn-badge.my-turn             { background: var(--c-text); }
+.turn-badge.my-turn #turn-number { color: #fff; }
+.turn-badge.my-turn #turn-player { color: rgba(255,255,255,0.7); }
 
-/* Deck pile */
-.deck-pile {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            3px;
-  cursor:         pointer;
-}
-
-.deck-card-back {
-  width:           36px;
-  height:          50px;
-  background:      var(--c-white);
-  border-radius:   6px;
+/* Right: icon cluster */
+.cb-icons {
   display:         flex;
   align-items:     center;
-  justify-content: center;
-  box-shadow:      2px 2px 0 var(--c-border);
-  border:          1px solid var(--c-border);
-}
-.deck-card-back svg { width: 16px; height: 16px; color: var(--c-sub); }
-
-#deck-count {
-  font-size:   10px;
-  font-weight: 500;
-  color:       var(--c-sub);
+  justify-content: flex-end;
+  gap:             3px;
 }
 
-/* ── Zone stacks ─────────────────────────────── */
-.zone-stacks {
-  display:     flex;
-  gap:         8px;
-  align-items: center;
+.cb-icon-btn {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  gap:             1px;
+  padding:         4px 5px;
+  border-radius:   var(--radius-sm);
+  border:          1px solid transparent;
+  background:      transparent;
+  cursor:          pointer;
+  min-width:       30px;
+  transition:      background var(--t-fast), border-color var(--t-fast);
+  -webkit-tap-highlight-color: transparent;
 }
+.cb-icon-btn:hover { background: var(--c-bg); border-color: var(--c-border); }
 
-.zone-stack {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            2px;
-  padding:        5px 8px;
-  background:     var(--c-white);
-  border:         1px solid var(--c-border);
-  border-radius:  var(--radius-sm);
-  cursor:         pointer;
-  transition:     background var(--t-fast), border-color var(--t-fast);
-  min-width:      42px;
-}
-.zone-stack:hover { background: var(--c-bg); border-color: var(--c-sub); }
-
+/* Zone icons inside cb-icons */
 .zone-icon {
-  width:  18px;
-  height: 18px;
+  width:  16px;
+  height: 16px;
   color:  var(--c-sub);
 }
 
 .zone-count {
-  font-size:   11px;
+  font-size:   9px;
   font-weight: 700;
   color:       var(--c-text);
 }
+
+/* Keep .zone-stack selector working for JS panel delegation */
+.zone-stack { cursor: pointer; }
+
 
 .zone-label {
   font-size:      7px;
@@ -668,20 +650,24 @@
 }
 .campaign-badge.hidden { display: none !important; }
 
-/* ── Floating End Turn button ────────────────── */
+/* ── End Turn button (center of control bar) ── */
 .btn-end-turn {
-  position:     absolute;
-  bottom:       12px;
-  right:        12px;
-  z-index:      10;
-  padding:      10px 22px;
-  font-size:    13px;
-  font-weight:  600;
+  padding:        9px 20px;
+  font-size:      13px;
+  font-weight:    600;
   letter-spacing: 0.3px;
+  white-space:    nowrap;
 }
 
 .btn-end-turn.pending {
   background: var(--c-sub) !important;
+}
+
+/* "Attesa" state (other player's turn) — use outline style */
+.btn-end-turn:disabled:not(.pending) {
+  background:   transparent;
+  color:        var(--c-sub);
+  border-color: var(--c-border);
 }
 
 /* ─────────────────────────────────────────────
@@ -1120,19 +1106,19 @@
 .hand-tuck-backdrop { display: none; }
 .hand-view-toggle   { display: none; }
 
-/* ── Mobile (≤767px) — compact layout, everything visible at once ── */
+/* ── Mobile (≤767px) ─────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* Shrink cards so the whole board fits without scrolling */
-  :root { --card-w: 58px; --card-h: 80px; }
+  /* Card sizes: readable but compact */
+  :root { --card-w: 64px; --card-h: 88px; }
 
-  /* Board: add focus-strip grid row, tight spacing */
+  /* Board: tight spacing, bottom pad for tuck peek */
   .game-board {
-    padding:            4px;
+    padding:            4px 4px 56px 4px;
     gap:                3px;
     grid-template-rows: auto auto auto auto 1fr;
   }
 
-  /* Focus strip — horizontal pill row to switch opponent */
+  /* Focus strip */
   .opp-focus-strip {
     display:     flex;
     gap:         5px;
@@ -1142,17 +1128,17 @@
     min-height:  26px;
   }
   .opp-focus-pill {
-    display:         flex;
-    align-items:     center;
-    gap:             3px;
-    padding:         3px 7px;
-    border-radius:   20px;
-    border:          1.5px solid var(--c-border);
-    background:      var(--c-white);
-    font-size:       10px;
-    font-weight:     500;
-    cursor:          pointer;
-    white-space:     nowrap;
+    display:     flex;
+    align-items: center;
+    gap:         3px;
+    padding:     3px 7px;
+    border-radius: 20px;
+    border:      1.5px solid var(--c-border);
+    background:  var(--c-white);
+    font-size:   10px;
+    font-weight: 500;
+    cursor:      pointer;
+    white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
   }
   .opp-focus-pill.active {
@@ -1161,24 +1147,16 @@
     color:        var(--c-white);
   }
   .opp-focus-pill .pill-avatar {
-    width:           16px;
-    height:          16px;
-    border-radius:   50%;
-    background:      var(--c-border);
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    font-size:       8px;
-    font-weight:     700;
+    width:  16px; height: 16px;
+    border-radius: 50%;
+    background: var(--c-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700;
   }
   .opp-focus-pill.active .pill-avatar { background: rgba(255,255,255,0.25); }
 
   /* Single-opponent view */
-  .opponents-area {
-    overflow: hidden;
-    --card-w: 40px;
-    --card-h: 56px;
-  }
+  .opponents-area { overflow: hidden; --card-w: 44px; --card-h: 61px; }
   .opp-zone             { display: none; }
   .opp-zone.opp-focus   { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px; }
   .opp-zone-name        { font-size: 9px; }
@@ -1186,49 +1164,99 @@
 
   /* Compact bars */
   .players-bar { gap: 3px; min-height: 30px; }
-  .center-bar  { gap: 6px; padding: 2px 0; }
-  .turn-badge  { padding: 3px 8px; }
   #turn-number { font-size: 11px; }
   #turn-player { font-size: 9px; }
-  .zone-stacks { gap: 3px; }
-  .zone-stack  { padding: 3px 4px; min-width: 28px; }
-  .zone-label  { font-size: 7px; }
-  .zone-count  { font-size: 9px; }
+
+  /* Control bar on mobile: tighten padding, shrink end-turn a bit */
+  .center-bar    { padding: 4px 6px; gap: 5px; }
+  .btn-end-turn  { padding: 7px 14px; font-size: 12px; }
+  .cb-icon-btn   { padding: 3px 4px; min-width: 26px; }
+  .zone-icon     { width: 14px; height: 14px; }
+  .zone-count    { font-size: 8px; }
 
   /* Player area */
   .player-area { gap: 3px; }
-  .field-row   { gap: 4px; }
-  .hand-area   { gap: 1px; }
-  .hand-cards  { gap: 3px; padding: 2px 4px; }
+  .field-row   { gap: 5px; }
+  .hand-cards  { gap: 4px; padding: 2px 4px; }
   .hand-label  { font-size: 7px; }
 
-  /* Nexus + artifact: compact */
-  .nexus-card { width: 72px; height: 100px; }
+  /* Nexus card: slightly compact */
+  .nexus-card { width: 78px; height: 108px; }
   .nexus-row  { gap: 6px; }
 
-  /* End-turn: compact, absolute in game-board (always visible) */
-  .btn-end-turn {
-    padding:   6px 10px;
-    font-size: 11px;
-    bottom:    6px;
-    right:     6px;
-  }
-
-  /* Touch drop targets: slightly bigger tap area */
+  /* Touch drop targets */
   .field-slot.droppable,
   .field-slot.drag-over { transform: scale(1.08); }
+
+  /* ── Hand tuck drawer ──────────────────────────────────────── */
+  #hand-area {
+    position:       fixed;
+    bottom:         0;
+    left:           0;
+    right:          0;
+    z-index:        50;
+    height:         38vh;          /* max open height — never covers control bar */
+    background:     var(--c-white);
+    border-top:     1.5px solid var(--c-border);
+    border-radius:  14px 14px 0 0;
+    padding:        0 8px max(6px, env(safe-area-inset-bottom));
+    transform:      translateY(calc(100% - 52px)); /* closed: 52px peek */
+    transition:     transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow:     0 -3px 16px rgba(0,0,0,0.08);
+    overflow:       hidden;
+    display:        flex;
+    flex-direction: column;
+  }
+  #hand-area.tuck-open { transform: translateY(0); }
+
+  /* Handle: the visible grab strip */
+  .hand-tuck-handle {
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    height:          28px;
+    flex-shrink:     0;
+    cursor:          pointer;
+    user-select:     none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hand-tuck-handle::before {
+    content:       '';
+    width:         36px;
+    height:        4px;
+    border-radius: 2px;
+    background:    var(--c-border);
+  }
+
+  /* Backdrop */
+  .hand-tuck-backdrop {
+    display:    none;
+    position:   fixed;
+    inset:      0;
+    background: rgba(0,0,0,0.18);
+    z-index:    49;
+  }
+  .hand-tuck-backdrop.visible { display: block; }
+
+  /* Cards inside tuck: fill remaining height, horizontal scroll */
+  #hand-area .hand-cards {
+    flex:       1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding:    2px 0 6px;
+  }
 }
 
-/* ── Tablet (768–1023px) — minor compact ── */
+/* ── Tablet (768–1023px) ── */
 @media (min-width: 768px) and (max-width: 1023px) {
   .game-board { padding: 6px; gap: 4px; }
-  .center-bar { gap: 8px; }
 }
 
 @media (max-width: 380px) {
-  :root { --card-w: 50px; --card-h: 70px; }
-  .nexus-card { width: 62px; height: 86px; }
-  .game-board { padding: 3px; gap: 2px; }
+  :root { --card-w: 56px; --card-h: 78px; }
+  .nexus-card  { width: 68px; height: 94px; }
+  .game-board  { padding: 3px 3px 52px 3px; gap: 2px; }
+  #hand-area   { height: 36vh; }
 }
 
 /* ── Eliminated player badge & pill ─────────── */

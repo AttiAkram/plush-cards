@@ -644,7 +644,7 @@ function updateEndTurnBtn(gameState) {
   const btn  = $('btn-end-turn');
   const isMe = gameState.currentTurn === getState().username;
   btn.disabled    = !isMe;
-  btn.textContent = 'Fine Turno';
+  btn.textContent = isMe ? 'Fine Turno' : 'Attesa…';
   btn.classList.remove('pending');
 }
 
@@ -1389,21 +1389,15 @@ function initGameActions() {
 // MOBILE — HAND TUCK DRAWER
 // ──────────────────────────────────────────────────────────────────────────────
 
-function setHandView(view) {
-  const ha = $('hand-area');
-  const bd = $('hand-tuck-backdrop');
-  ha?.classList.remove('tuck-mano', 'tuck-campo');
-  if (view) {
-    ha?.classList.add(`tuck-${view}`);
-    bd?.classList.add('visible');
-    document.querySelectorAll('.hvt-btn').forEach(b =>
-      b.classList.toggle('hvt-active', b.dataset.view === view));
-  } else {
-    bd?.classList.remove('visible');
-  }
+function closeHandTuck() {
+  $('hand-area')?.classList.remove('tuck-open');
+  $('hand-tuck-backdrop')?.classList.remove('visible');
 }
 
-function closeHandTuck() { setHandView(null); }
+function openHandTuck() {
+  $('hand-area')?.classList.add('tuck-open');
+  $('hand-tuck-backdrop')?.classList.add('visible');
+}
 
 function initHandTuck() {
   const handle   = $('hand-tuck-handle');
@@ -1411,18 +1405,9 @@ function initHandTuck() {
   if (!handle || !backdrop) return;
 
   handle.addEventListener('click', () => {
-    const ha     = $('hand-area');
-    const isOpen = ha?.classList.contains('tuck-mano') || ha?.classList.contains('tuck-campo');
-    isOpen ? closeHandTuck() : setHandView('mano');
+    $('hand-area')?.classList.contains('tuck-open') ? closeHandTuck() : openHandTuck();
   });
   backdrop.addEventListener('click', closeHandTuck);
-
-  document.querySelectorAll('.hvt-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      setHandView(btn.dataset.view);
-    });
-  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -558,9 +558,6 @@
       </button>
     </div>
 
-    <!-- End Turn (floating, bottom-right) -->
-    <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
-
     <!-- Attack mode hint (floating, top-center) -->
     <div class="attack-mode-hint hidden" id="attack-mode-hint">
       <span id="attack-hint-text">Scegli un bersaglio da attaccare</span>
@@ -581,54 +578,51 @@
       <!-- opponent zones injected by JS -->
     </div>
 
-    <!-- ── Row 3: Center bar (turn + deck + zones) ────────────── -->
+    <!-- ── Control bar: turn info | end-turn button | log + zones ── -->
     <div class="center-bar">
+
+      <!-- Left: turn info -->
       <div class="turn-badge" id="turn-badge">
         <span id="turn-number">Turno 1</span>
         <span id="turn-player">—</span>
       </div>
-      <div class="deck-pile" id="deck-pile" title="Mazzo">
-        <div class="deck-card-back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
-        </div>
-        <span id="deck-count" class="deck-count">—</span>
-      </div>
-      <!-- Log toggle -->
-      <button class="btn btn-sm btn-outline game-log-toggle" id="btn-toggle-log" title="Log eventi">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Log
-      </button>
 
-      <!-- Zone stacks -->
-      <div class="zone-stacks">
-        <button class="zone-stack" data-zone="discard" title="Scarti (le tue carte eliminate)">
+      <!-- Center: the one end-turn button, always visible -->
+      <button class="btn btn-primary btn-end-turn" id="btn-end-turn" disabled>Fine Turno</button>
+
+      <!-- Right: compact icon cluster (log, zones, deck) -->
+      <div class="cb-icons">
+        <button class="cb-icon-btn game-log-toggle" id="btn-toggle-log" title="Log">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </button>
+        <button class="cb-icon-btn zone-stack" data-zone="discard" title="Scarti">
           <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3"  y="6"  width="18" height="15" rx="2"/>
-            <rect x="5"  y="4"  width="14" height="14" rx="2" fill="var(--c-white)"/>
-            <rect x="7"  y="2"  width="10" height="14" rx="2" fill="var(--c-white)"/>
+            <rect x="3" y="6" width="18" height="15" rx="2"/>
+            <rect x="5" y="4" width="14" height="14" rx="2" fill="var(--c-white)"/>
+            <rect x="7" y="2" width="10" height="14" rx="2" fill="var(--c-white)"/>
             <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/>
           </svg>
           <span class="zone-count" id="zone-count-discard">0</span>
-          <span class="zone-label">Scarti</span>
         </button>
-        <button class="zone-stack" data-zone="void" title="Vuoto (carte dissolte)">
+        <button class="cb-icon-btn zone-stack" data-zone="void" title="Vuoto">
           <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="9"/>
-            <path d="M12 3C8 7 8 17 12 21"/>
-            <path d="M12 3C16 7 16 17 12 21"/>
+            <path d="M12 3C8 7 8 17 12 21"/><path d="M12 3C16 7 16 17 12 21"/>
             <line x1="3" y1="12" x2="21" y2="12"/>
           </svg>
           <span class="zone-count" id="zone-count-void">0</span>
-          <span class="zone-label">Vuoto</span>
         </button>
-        <button class="zone-stack" data-zone="absolute" title="Assoluto (rimozione permanente)">
+        <button class="cb-icon-btn zone-stack" data-zone="absolute" title="Assoluto">
           <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <circle cx="12" cy="12" r="7" stroke-dasharray="3 2"/>
             <circle cx="12" cy="12" r="10" stroke-dasharray="2 3" opacity=".5"/>
           </svg>
           <span class="zone-count" id="zone-count-absolute">0</span>
-          <span class="zone-label">Assoluto</span>
+        </button>
+        <button class="cb-icon-btn" id="deck-pile" title="Mazzo">
+          <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg>
+          <span class="zone-count" id="deck-count">—</span>
         </button>
       </div>
     </div>
@@ -688,14 +682,9 @@
         </div>
       </div>
 
-      <!-- Hand (becomes fixed tuck drawer on mobile) -->
+      <!-- Hand (fixed tuck drawer on mobile) -->
       <div class="hand-area" id="hand-area">
         <div id="hand-tuck-handle" class="hand-tuck-handle"></div>
-        <!-- Toggle: Campo / Mano (mobile only, visible when drawer is open) -->
-        <div class="hand-view-toggle" id="hand-view-toggle">
-          <button class="hvt-btn" data-view="campo">Campo</button>
-          <button class="hvt-btn" data-view="mano">Mano</button>
-        </div>
         <p class="hand-label">La tua mano</p>
         <div id="player-hand" class="hand-cards"></div>
       </div>
