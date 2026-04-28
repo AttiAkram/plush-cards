@@ -1120,37 +1120,39 @@
 .hand-tuck-backdrop { display: none; }
 .hand-view-toggle   { display: none; }
 
-/* ── Mobile (≤767px) — tuck hand + single-opponent focus ────── */
+/* ── Mobile (≤767px) — compact layout, everything visible at once ── */
 @media (max-width: 767px) {
-  /* Board: keep grid but add bottom padding for tuck peek */
+  /* Shrink cards so the whole board fits without scrolling */
+  :root { --card-w: 58px; --card-h: 80px; }
+
+  /* Board: add focus-strip grid row, tight spacing */
   .game-board {
-    padding:              5px 5px calc(var(--hand-peek, 60px) + 4px) 5px;
-    gap:                  4px;
-    grid-template-rows:   auto auto auto auto 1fr;
+    padding:            4px;
+    gap:                3px;
+    grid-template-rows: auto auto auto auto 1fr;
   }
 
-  /* Focus strip: horizontal scroll row of avatar pills */
+  /* Focus strip — horizontal pill row to switch opponent */
   .opp-focus-strip {
     display:     flex;
-    gap:         6px;
-    padding:     2px 4px;
+    gap:         5px;
+    padding:     1px 2px;
     overflow-x:  auto;
     align-items: center;
-    min-height:  32px;
+    min-height:  26px;
   }
   .opp-focus-pill {
     display:         flex;
     align-items:     center;
-    gap:             4px;
-    padding:         4px 8px;
+    gap:             3px;
+    padding:         3px 7px;
     border-radius:   20px;
     border:          1.5px solid var(--c-border);
     background:      var(--c-white);
-    font-size:       11px;
+    font-size:       10px;
     font-weight:     500;
     cursor:          pointer;
     white-space:     nowrap;
-    transition:      border-color var(--t-fast), background var(--t-fast);
     -webkit-tap-highlight-color: transparent;
   }
   .opp-focus-pill.active {
@@ -1159,150 +1161,74 @@
     color:        var(--c-white);
   }
   .opp-focus-pill .pill-avatar {
-    width:           20px;
-    height:          20px;
+    width:           16px;
+    height:          16px;
     border-radius:   50%;
     background:      var(--c-border);
     display:         flex;
     align-items:     center;
     justify-content: center;
-    font-size:       10px;
+    font-size:       8px;
     font-weight:     700;
   }
-  .opp-focus-pill.active .pill-avatar {
-    background: rgba(255,255,255,0.25);
-  }
+  .opp-focus-pill.active .pill-avatar { background: rgba(255,255,255,0.25); }
 
-  /* Opponents area: hide all zones except the focused one */
+  /* Single-opponent view */
   .opponents-area {
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden;
+    --card-w: 40px;
+    --card-h: 56px;
   }
   .opp-zone             { display: none; }
-  .opp-zone.opp-focus   { display: flex; flex-direction: column; }
+  .opp-zone.opp-focus   { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px; }
+  .opp-zone-name        { font-size: 9px; }
+  .opp-hp-big           { font-size: 12px; }
 
-  /* Compact center bar */
-  .center-bar { gap: 8px; }
-  .hand-cards { gap: 4px; }
-  .field-row  { gap: 5px; }
-  .players-bar { gap: 4px; }
-  .zone-stacks { gap: 5px; }
-  .zone-stack { padding: 4px 6px; min-width: 36px; }
+  /* Compact bars */
+  .players-bar { gap: 3px; min-height: 30px; }
+  .center-bar  { gap: 6px; padding: 2px 0; }
+  .turn-badge  { padding: 3px 8px; }
+  #turn-number { font-size: 11px; }
+  #turn-player { font-size: 9px; }
+  .zone-stacks { gap: 3px; }
+  .zone-stack  { padding: 3px 4px; min-width: 28px; }
+  .zone-label  { font-size: 7px; }
+  .zone-count  { font-size: 9px; }
 
-  /* Larger touch targets for droppable slots */
-  .field-slot.droppable,
-  .field-slot.drag-over {
-    transform: scale(1.1);
-  }
+  /* Player area */
+  .player-area { gap: 3px; }
+  .field-row   { gap: 4px; }
+  .hand-area   { gap: 1px; }
+  .hand-cards  { gap: 3px; padding: 2px 4px; }
+  .hand-label  { font-size: 7px; }
 
-  /* ── End-turn button: move to top-right on mobile ─────────── */
+  /* Nexus + artifact: compact */
+  .nexus-card { width: 72px; height: 100px; }
+  .nexus-row  { gap: 6px; }
+
+  /* End-turn: compact, absolute in game-board (always visible) */
   .btn-end-turn {
-    position:  fixed;
-    bottom:    auto;
-    top:       8px;
-    right:     52px;
-    z-index:   60;
-    padding:   6px 14px;
-    font-size: 12px;
+    padding:   6px 10px;
+    font-size: 11px;
+    bottom:    6px;
+    right:     6px;
   }
 
-  /* ── Hand tuck drawer ──────────────────────────────────────── */
-  #hand-area {
-    position:       fixed;
-    bottom:         0;
-    left:           0;
-    right:          0;
-    z-index:        50;
-    background:     var(--c-white);
-    border-top:     1.5px solid var(--c-border);
-    border-radius:  14px 14px 0 0;
-    padding:        0 8px max(8px, env(safe-area-inset-bottom));
-    transform:      translateY(calc(100% - var(--hand-peek, 60px)));
-    transition:     transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow:     0 -4px 24px rgba(0,0,0,0.1);
-    max-height:     80vh;
-    overflow:       hidden;
-    display:        flex;
-    flex-direction: column;
-  }
-  /* "Mano" state: hand rises high, showing only cards */
-  #hand-area.tuck-mano { transform: translateY(0); }
-  /* "Campo" state: hand at ~42vh, field + nexus visible above */
-  #hand-area.tuck-campo { transform: translateY(calc(100% - 42vh)); }
-
-  /* Handle bar — always the visible 60px peek strip */
-  .hand-tuck-handle {
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    height:          var(--hand-peek, 60px);
-    flex-shrink:     0;
-    cursor:          pointer;
-    user-select:     none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .hand-tuck-handle::before {
-    content:       '';
-    width:         36px;
-    height:        4px;
-    border-radius: 2px;
-    background:    var(--c-border);
-  }
-
-  /* ── View toggle (Campo / Mano) — visible only when drawer open ── */
-  .hand-view-toggle {
-    display:         none;  /* shown via JS class below */
-    justify-content: center;
-    gap:             6px;
-    padding:         4px 0 6px;
-    flex-shrink:     0;
-  }
-  #hand-area.tuck-mano .hand-view-toggle,
-  #hand-area.tuck-campo .hand-view-toggle { display: flex; }
-
-  .hvt-btn {
-    padding:       5px 18px;
-    border-radius: 20px;
-    border:        1.5px solid var(--c-border);
-    background:    transparent;
-    font-size:     12px;
-    font-weight:   500;
-    cursor:        pointer;
-    transition:    background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .hvt-btn.hvt-active {
-    background:   var(--c-text);
-    border-color: var(--c-text);
-    color:        var(--c-white);
-  }
-
-  /* Backdrop overlay */
-  .hand-tuck-backdrop {
-    display:    none;
-    position:   fixed;
-    inset:      0;
-    background: rgba(0,0,0,0.22);
-    z-index:    49;
-  }
-  .hand-tuck-backdrop.visible { display: block; }
-
-  /* Hand cards inside tuck */
-  #hand-area .hand-cards {
-    flex:       1;
-    overflow-x: auto;
-    padding:    4px 0 8px;
-  }
+  /* Touch drop targets: slightly bigger tap area */
+  .field-slot.droppable,
+  .field-slot.drag-over { transform: scale(1.08); }
 }
 
-/* ── Tablet (768–1023px) — compact but no tuck ──────────────── */
+/* ── Tablet (768–1023px) — minor compact ── */
 @media (min-width: 768px) and (max-width: 1023px) {
   .game-board { padding: 6px; gap: 4px; }
   .center-bar { gap: 8px; }
 }
 
 @media (max-width: 380px) {
-  .game-board { padding: 4px 4px calc(var(--hand-peek, 60px) + 2px) 4px; gap: 3px; }
+  :root { --card-w: 50px; --card-h: 70px; }
+  .nexus-card { width: 62px; height: 86px; }
+  .game-board { padding: 3px; gap: 2px; }
 }
 
 /* ── Eliminated player badge & pill ─────────── */

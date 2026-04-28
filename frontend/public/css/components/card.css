@@ -207,14 +207,9 @@
 }
 
 /* ── Responsive ────────────────────────────── */
-@media (max-width: 600px) {
-  :root { --card-w: 90px; --card-h: 126px; }
-  .nexus-card { width: 100px; height: 140px; }
+/* card sizes on mobile are controlled by game.css via --card-w/h */
+@media (max-width: 767px) {
+  .card-description { font-size: 4px; }
+  .card-name        { font-size: 6px; }
   .card-image-area .creature-art svg { width: 50%; height: 50%; }
-  .card-description { font-size: 5px; }
-  .card-name        { font-size: 8px; }
-}
-
-@media (max-width: 380px) {
-  :root { --card-w: 76px; --card-h: 106px; }
 }
