@@ -114,7 +114,10 @@
   font-weight: 800;
   line-height: 1;
   color:       var(--c-text);
+  display:     inline-block;
 }
+.player-hp-big.hp-up   { animation: popUp   0.45s ease; }
+.player-hp-big.hp-down { animation: popDown 0.45s ease; }
 
 .player-hp-label {
   font-size:   9px;
@@ -1045,17 +1048,22 @@
 }
 
 .game-log-line {
-  font-size:   11px;
-  line-height: 1.5;
-  padding:     3px 6px;
+  font-size:    11px;
+  line-height:  1.5;
+  padding:      3px 6px 3px 8px;
   border-radius: 3px;
-  word-break:  break-word;
+  border-left:  2px solid transparent;
+  word-break:   break-word;
+}
+.game-log-line.log-new {
+  animation: logNewFlash 0.55s ease forwards;
 }
 
 .gl-turn   { font-weight: 700; color: var(--c-text); background: var(--c-bg); }
 .gl-attack { color: var(--c-red);  }
 .gl-effect { color: var(--c-sub);  }
 .gl-system { color: var(--c-sub); font-style: italic; }
+.gl-chapter { font-weight: 700; color: var(--c-text); text-align: center; font-size: 10px; letter-spacing: 1px; }
 
 /* Log toggle button in center bar */
 .game-log-toggle {
@@ -1416,9 +1424,24 @@
   text-align:  left;
   color:       var(--c-text);
 }
-.game-menu-item:hover   { background: var(--c-bg); }
-.game-menu-item.hidden  { display: none; }
-.gmi-icon { font-size: 17px; width: 22px; text-align: center; }
+.game-menu-item:hover            { background: var(--c-bg); }
+.game-menu-item:active:not(:disabled) { background: #e8e8e8; }
+.game-menu-item.hidden           { display: none; }
+.gmi-icon {
+  width:           22px;
+  text-align:      center;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+}
+.gmi-icon svg { width: 16px; height: 16px; }
+
+/* Card appearing in a zone */
+.card.zone-appear { animation: cardZoneAppear 0.22s ease; }
+
+/* Marker pop-in */
+.card-marker { animation: markerPop 0.2s ease; }
 
 .game-menu-divider {
   padding:        8px 14px 3px;

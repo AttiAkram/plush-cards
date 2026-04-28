@@ -61,8 +61,16 @@
 }
 .btn-danger:hover { background: #FFF5F5; }
 
-/* Click feedback */
-.btn-bounce:active { transform: scale(0.97); }
+/* Click feedback — all buttons get a subtle press-down */
+.btn:active:not(:disabled) { transform: scale(0.95); box-shadow: none; }
+.btn-bounce:active { transform: scale(0.95); }
+
+/* Secondary / outline active */
+.btn-primary:active:not(:disabled),
+.btn-accent:active:not(:disabled)  { background: #404040; }
+.btn-outline:active:not(:disabled),
+.btn-secondary:active:not(:disabled) { background: #e8e8e8; }
+.btn-danger:active:not(:disabled)   { background: #ffe0e0; }
 
 /* Disabled */
 button:disabled {

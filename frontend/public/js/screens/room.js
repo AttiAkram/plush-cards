@@ -142,7 +142,7 @@ function initSocketListeners() {
   on('socket:error',     msg => showToast(msg, true));
 
   on('socket:dice_rolled', ({ username: who, sides, result }) => {
-    showToast(`🎲 ${who}: ${result} su D${sides}`);
+    showToast(`${who}: ${result} su D${sides}`);
     const el = $('lobby-dice-result');
     if (el) el.textContent = `${who} → ${result} su D${sides}`;
   });

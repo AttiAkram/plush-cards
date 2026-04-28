@@ -256,6 +256,51 @@
 }
 .admin-filter-select:focus { outline: none; border-color: var(--c-text); }
 
+/* Bulk action bar */
+.bulk-action-bar {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+  padding:     8px 12px;
+  background:  var(--c-text);
+  color:       #fff;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  animation:   slideInUp 0.18s ease;
+}
+.bulk-action-bar.hidden { display: none; }
+.bulk-count {
+  font-size:   12px;
+  font-weight: 700;
+  color:       #fff;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.bulk-action-bar .btn { font-size: 11px; padding: 4px 10px; }
+.bulk-action-bar .btn-outline {
+  border-color: rgba(255,255,255,0.4);
+  background:   transparent;
+  color:        #fff;
+}
+.bulk-action-bar .btn-outline:hover {
+  background:   rgba(255,255,255,0.12);
+  border-color: #fff;
+}
+
+/* Select-all row */
+.admin-card-select-all {
+  display:     flex;
+  align-items: center;
+  gap:         7px;
+  font-size:   12px;
+  color:       var(--c-sub);
+  padding:     4px 14px 8px;
+  cursor:      pointer;
+  user-select: none;
+}
+.admin-card-select-all input { cursor: pointer; accent-color: var(--c-text); width: 14px; height: 14px; }
+
 /* Card list */
 .admin-card-list {
   display:        flex;
@@ -271,10 +316,24 @@
   background:     var(--c-white);
   border:         1px solid var(--c-border);
   border-radius:  var(--radius);
-  transition:     border-color var(--t-fast);
+  transition:     border-color var(--t-fast), background var(--t-fast);
   flex-wrap:      wrap;
 }
-.admin-card-row:hover { border-color: var(--c-sub); }
+.admin-card-row:hover             { border-color: var(--c-sub); }
+.admin-card-row.row-selected      { background: rgba(15,15,15,0.04); border-color: var(--c-text); }
+
+/* Checkbox column */
+.admin-card-check {
+  display:     flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.admin-card-check input {
+  cursor:       pointer;
+  accent-color: var(--c-text);
+  width:        15px;
+  height:       15px;
+}
 
 .admin-card-rarity-badge {
   width:           28px;

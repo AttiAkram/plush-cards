@@ -59,6 +59,7 @@ let currentValidSlots = [];
 // ── Attack mode state ─────────────────────────────────────────────────────────
 
 let _attackModeCard = null;   // { uid, name, ... } card selected as attacker
+const _prevNexusHp = new Map();  // username → previous HP value for pop animation
 
 // ── Touch state ───────────────────────────────────────────────────────────────
 
@@ -195,18 +196,19 @@ function addToLog(text, type = 'effect') {
 
   // If panel is open, append the line directly (no full re-render)
   if (!$('game-log-panel').classList.contains('hidden')) {
-    _appendLogEntry({ text, type });
+    _appendLogEntry({ text, type }, true);
     const entries = $('game-log-entries');
     entries.scrollTop = entries.scrollHeight;
   }
 }
 
-function _appendLogEntry({ text, type }) {
+function _appendLogEntry({ text, type }, isNew = false) {
   const empty = $('game-log-entries').querySelector('.game-log-empty');
   if (empty) empty.remove();
-  const line = el('div', `game-log-line gl-${type}`);
+  const line = el('div', `game-log-line gl-${type}${isNew ? ' log-new' : ''}`);
   line.textContent = text;
   $('game-log-entries').appendChild(line);
+  if (isNew) setTimeout(() => line.classList.remove('log-new'), 600);
 }
 
 function renderLog() {
@@ -365,6 +367,16 @@ function renderPlayersBar(gameState) {
         </div>` : ''}`}
       </div>
       ${STATUS_ICONS[status] ?? ''}`;
+
+    // HP pop animation
+    const hpEl   = pill.querySelector('.player-hp-big');
+    const prevHp = _prevNexusHp.get(username);
+    if (hpEl && prevHp !== undefined && p.nexus.hp !== prevHp) {
+      const cls = p.nexus.hp > prevHp ? 'hp-up' : 'hp-down';
+      hpEl.classList.add(cls);
+      hpEl.addEventListener('animationend', () => hpEl.classList.remove(cls), { once: true });
+    }
+    _prevNexusHp.set(username, p.nexus.hp);
 
     // Click the pill body → open panel; click HP buttons → adjust life
     pill.addEventListener('click', e => {
@@ -1561,8 +1573,8 @@ function initSocketListeners() {
   });
 
   on('socket:dice_rolled', ({ username: who, sides, result }) => {
-    addToLog(`🎲 ${who} tira ${result} su D${sides}`, 'system');
-    showToast(`🎲 ${who}: ${result} (D${sides})`);
+    addToLog(`${who} tira ${result} su D${sides}`, 'system');
+    showToast(`${who}: ${result} su D${sides}`);
   });
 
   on('socket:gm_random_result', ({ results, gameState: newGs }) => {

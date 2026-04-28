@@ -31,3 +31,34 @@
   from { opacity: 0; transform: translateY(20px) scale(0.92); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
+
+/* HP number bounce (green = increase, red = decrease) */
+@keyframes popUp {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); color: var(--c-green); }
+  100% { transform: scale(1); }
+}
+@keyframes popDown {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.2); color: var(--c-red); }
+  100% { transform: scale(1); }
+}
+
+/* Log entry flash on arrival */
+@keyframes logNewFlash {
+  0%   { border-left-color: var(--c-text); background: rgba(15,15,15,0.06); }
+  100% { border-left-color: transparent;   background: transparent; }
+}
+
+/* Card zone appear */
+@keyframes cardZoneAppear {
+  from { opacity: 0; transform: scale(0.88) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* Marker pop-in */
+@keyframes markerPop {
+  from { transform: scale(0) rotate(-15deg); opacity: 0; }
+  60%  { transform: scale(1.2); }
+  to   { transform: scale(1) rotate(0);      opacity: 1; }
+}

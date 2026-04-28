@@ -151,7 +151,72 @@ const RARITY_LABELS_CARD = {
   comune: 'C', raro: 'R', epico: 'E', mitico: 'M', leggendario: 'L',
 };
 
-let _allCards = [];
+let _allCards    = [];
+let _selectedIds = new Set();   // set of card IDs currently checked
+
+function updateBulkBar() {
+  const n        = _selectedIds.size;
+  const bar      = $('bulk-action-bar');
+  const countEl  = $('bulk-count');
+  if (!bar) return;
+  bar.classList.toggle('hidden', n === 0);
+  if (countEl) countEl.textContent = `${n} selezionat${n === 1 ? 'a' : 'e'}`;
+}
+
+function updateSelectAllCheckbox(filteredCards) {
+  const cb = $('card-select-all');
+  if (!cb) return;
+  const all = filteredCards.length > 0 && filteredCards.every(c => _selectedIds.has(c.id));
+  cb.checked       = all;
+  cb.indeterminate = !all && filteredCards.some(c => _selectedIds.has(c.id));
+}
+
+async function bulkToggleActive(activate) {
+  const ids = Array.from(_selectedIds);
+  if (!confirm(`${activate ? 'Attivare' : 'Disattivare'} ${ids.length} carte selezionate?`)) return;
+  for (const id of ids) {
+    const card = _allCards.find(c => c.id === id);
+    if (!card || card.active === activate) continue;
+    const res = await api.patch(`/api/admin/cards/${id}/toggle`, {});
+    if (!res.error) card.active = res.active;
+  }
+  showToast(`${ids.length} carte ${activate ? 'attivate' : 'disattivate'}`);
+  _selectedIds.clear();
+  applyCardFilters();
+}
+
+async function bulkDuplicate() {
+  const ids = Array.from(_selectedIds);
+  if (!confirm(`Duplicare ${ids.length} carte selezionate?`)) return;
+  let count = 0;
+  for (const id of ids) {
+    const card = _allCards.find(c => c.id === id);
+    if (!card) continue;
+    const suffix = `_copy${Date.now() % 100000}`;
+    const body = { ...card, id: `${id}${suffix}`, name: `${card.name} (copia)`, active: false };
+    const res = await api.post('/api/admin/cards', body);
+    if (!res.error) count++;
+  }
+  showToast(`${count} carte duplicate`);
+  _selectedIds.clear();
+  loadCards();
+}
+
+function bulkExport() {
+  const ids      = Array.from(_selectedIds);
+  const toExport = _allCards.filter(c => ids.includes(c.id));
+  const json     = JSON.stringify(toExport, null, 2);
+  const blob     = new Blob([json], { type: 'application/json' });
+  const url      = URL.createObjectURL(blob);
+  const a        = document.createElement('a');
+  a.href         = url;
+  a.download     = `plush-cards-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${ids.length} carte esportate`);
+}
 
 async function loadCards() {
   const list = $('admin-card-list');
@@ -159,6 +224,8 @@ async function loadCards() {
   const cards = await api.get('/api/admin/cards');
   if (cards.error) { list.innerHTML = `<div class="admin-loading">${escHtml(cards.error)}</div>`; return; }
   _allCards = cards;
+  _selectedIds.clear();
+  updateBulkBar();
   applyCardFilters();
 }
 
@@ -180,9 +247,14 @@ function applyCardFilters() {
   renderCardList(filtered);
 }
 
+let _filteredCards = [];   // current visible card set (used for select-all)
+
 function renderCardList(cards) {
+  _filteredCards = cards;
   const list = $('admin-card-list');
   list.innerHTML = '';
+
+  updateSelectAllCheckbox(cards);
 
   if (!cards.length) {
     list.innerHTML = '<div class="admin-loading">Nessuna carta trovata.</div>';
@@ -194,8 +266,12 @@ function renderCardList(cards) {
       ? card.tags.map(t => `<span class="admin-card-tag">${escHtml(t)}</span>`).join('')
       : '';
 
-    const row = el('div', 'admin-card-row');
+    const isSelected = _selectedIds.has(card.id);
+    const row = el('div', `admin-card-row${isSelected ? ' row-selected' : ''}`);
     row.innerHTML = `
+      <div class="admin-card-check">
+        <input type="checkbox" class="admin-row-cb" data-id="${escHtml(card.id)}" aria-label="Seleziona ${escHtml(card.name)}"${isSelected ? ' checked' : ''}>
+      </div>
       <div class="admin-card-rarity-badge rarity-${card.rarity}">${RARITY_LABELS_CARD[card.rarity] ?? '?'}</div>
       <div class="admin-card-info">
         <span class="admin-card-name">${escHtml(card.name)}</span>
@@ -204,6 +280,15 @@ function renderCardList(cards) {
       </div>
       <div class="admin-card-status ${card.active ? 'status-active' : 'status-disabled'}">${card.active ? 'Attiva' : 'Bozza'}</div>
       <div class="admin-card-actions"></div>`;
+
+    // Checkbox behaviour
+    const cb = row.querySelector('.admin-row-cb');
+    cb.addEventListener('change', () => {
+      if (cb.checked) _selectedIds.add(card.id); else _selectedIds.delete(card.id);
+      row.classList.toggle('row-selected', cb.checked);
+      updateBulkBar();
+      updateSelectAllCheckbox(_filteredCards);
+    });
 
     const actions = row.querySelector('.admin-card-actions');
 
@@ -270,11 +355,37 @@ export function enterAdmin() {
   showScreen('admin');
 }
 
+function initBulkActions() {
+  // Select-all checkbox
+  $('card-select-all')?.addEventListener('change', e => {
+    if (e.target.checked) {
+      _filteredCards.forEach(c => _selectedIds.add(c.id));
+    } else {
+      _filteredCards.forEach(c => _selectedIds.delete(c.id));
+    }
+    updateBulkBar();
+    // Re-render so checkboxes reflect state
+    renderCardList(_filteredCards);
+  });
+
+  // Bulk bar actions
+  $('btn-bulk-activate')?.addEventListener('click',   () => bulkToggleActive(true));
+  $('btn-bulk-deactivate')?.addEventListener('click', () => bulkToggleActive(false));
+  $('btn-bulk-duplicate')?.addEventListener('click',  () => bulkDuplicate());
+  $('btn-bulk-export')?.addEventListener('click',     () => bulkExport());
+  $('btn-bulk-deselect')?.addEventListener('click', () => {
+    _selectedIds.clear();
+    updateBulkBar();
+    renderCardList(_filteredCards);
+  });
+}
+
 export function initAdminScreen() {
   initTabs();
   initNewUserModal();
   initCardEditor();
   initCardFilters();
+  initBulkActions();
 
   $('btn-new-card').addEventListener('click', () => openCardEditor(null, loadCards));
 
