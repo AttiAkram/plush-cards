@@ -101,7 +101,7 @@ router.post('/cards', authenticate, requireRole('root', 'admin'), (req, res) => 
     return res.status(400).json({ error: `id "${id}" già in uso` });
   if (!['personaggio', 'artefatto'].includes(type))
     return res.status(400).json({ error: 'type non valido' });
-  if (!['comune', 'raro', 'epico', 'mitico', 'leggendario'].includes(rarity))
+  if (!['c', 'r', 'm', 's', 'ss'].includes(rarity))
     return res.status(400).json({ error: 'rarity non valida' });
 
   const card = {

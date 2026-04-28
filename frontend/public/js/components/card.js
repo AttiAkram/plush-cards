@@ -7,11 +7,11 @@ import { el, escHtml }           from '../utils/dom.js';
 import { CREATURES, CREATURE_FALLBACK } from '../data/creatures.js';
 
 const RARITY_LABELS = {
-  comune:      'Comune',
-  raro:        'Raro',
-  epico:       'Epico',
-  mitico:      'Mitico',
-  leggendario: 'Leggendario',
+  c:      'C',
+  r:        'R',
+  m:       'M',
+  s:      'S',
+  ss: 'SS',
 };
 
 // ── SVG icon snippets ──────────────────────────────────────────────────────────

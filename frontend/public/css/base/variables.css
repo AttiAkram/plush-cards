@@ -13,10 +13,10 @@
   --c-amber:   #FF8C00;
 
   /* Rarity border colors (light-theme adapted) */
-  --r-comune:  #90A4AE;
-  --r-raro:    #1565C0;
-  --r-epico:   #6A1B9A;
-  --r-mitico:  #E65100;
+  --r-c:  #90A4AE;
+  --r-r:    #1565C0;
+  --r-m:   #6A1B9A;
+  --r-s:  #E65100;
 
   /* Card dimensions */
   --card-w: 110px;

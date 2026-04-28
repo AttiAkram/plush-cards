@@ -66,7 +66,7 @@ function refreshPreview() {
     name:        $('ce-name')?.value.trim() || 'Nome carta',
     damage:      Number($('ce-damage')?.value) || 0,
     hp:          Number($('ce-hp')?.value)     || 1,
-    rarity:      $('ce-rarity')?.value         || 'comune',
+    rarity:      $('ce-rarity')?.value         || 'c',
     type:        $('ce-type')?.value           || 'personaggio',
     description: $('ce-description')?.value    || '',
     image:       _imageData,
@@ -279,7 +279,7 @@ function clearForm() {
   $('ce-name').value        = '';
   $('ce-damage').value      = '1';
   $('ce-hp').value          = '1';
-  $('ce-rarity').value      = 'comune';
+  $('ce-rarity').value      = 'c';
   $('ce-type').value        = 'personaggio';
   $('ce-active').checked    = false;
   $('ce-description').value = '';
@@ -305,7 +305,7 @@ export function openCardEditor(card, onSaved) {
     $('ce-name').value        = card.name;
     $('ce-damage').value      = card.damage ?? 0;
     $('ce-hp').value          = card.hp ?? 1;
-    $('ce-rarity').value      = card.rarity ?? 'comune';
+    $('ce-rarity').value      = card.rarity ?? 'c';
     $('ce-type').value        = card.type ?? 'personaggio';
     $('ce-active').checked    = card.active ?? false;
     $('ce-description').value = card.description ?? '';

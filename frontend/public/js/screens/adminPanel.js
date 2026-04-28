@@ -148,7 +148,7 @@ function initNewUserModal() {
 // ── Card list ─────────────────────────────────────────────────────────────────
 
 const RARITY_LABELS_CARD = {
-  comune: 'C', raro: 'R', epico: 'E', mitico: 'M', leggendario: 'L',
+  c: 'C', r: 'R', m: 'M', s: 'S', ss: 'SS',
 };
 
 let _allCards    = [];

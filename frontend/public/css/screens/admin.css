@@ -346,11 +346,11 @@
   font-weight:     800;
   flex-shrink:     0;
 }
-.admin-card-rarity-badge.rarity-comune      { background: #e9ecef; color: #495057; }
-.admin-card-rarity-badge.rarity-raro        { background: #cce5ff; color: #004085; }
-.admin-card-rarity-badge.rarity-epico       { background: #e2d9f3; color: #4b2e83; }
-.admin-card-rarity-badge.rarity-mitico      { background: #fff3cd; color: #856404; }
-.admin-card-rarity-badge.rarity-leggendario { background: #ffdbe1; color: #a71d2a; }
+.admin-card-rarity-badge.rarity-c      { background: #e9ecef; color: #495057; }
+.admin-card-rarity-badge.rarity-r        { background: #cce5ff; color: #004085; }
+.admin-card-rarity-badge.rarity-m       { background: #e2d9f3; color: #4b2e83; }
+.admin-card-rarity-badge.rarity-s      { background: #fff3cd; color: #856404; }
+.admin-card-rarity-badge.rarity-ss { background: #ffdbe1; color: #a71d2a; }
 
 .admin-card-info {
   display:        flex;

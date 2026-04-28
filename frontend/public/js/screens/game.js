@@ -79,8 +79,8 @@ const _TAP_MOVE_PX = 10;
 // ── Rarity labels ─────────────────────────────────────────────────────────────
 
 const RARITY_LABELS = {
-  comune: 'Comune', raro: 'Raro', epico: 'Epico',
-  mitico: 'Mitico', leggendario: 'Leggendario',
+  c: 'C', r: 'R', m: 'M',
+  s: 'S', ss: 'SS',
 };
 
 // ── Ghost card helpers (touch drag) ──────────────────────────────────────────

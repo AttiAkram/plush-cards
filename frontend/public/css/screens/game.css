@@ -853,11 +853,11 @@
   background:     var(--c-bg);
   color:          var(--c-sub);
 }
-.card-modal-rarity.rarity-comune      { color: var(--r-comune); }
-.card-modal-rarity.rarity-raro        { color: var(--r-raro);   }
-.card-modal-rarity.rarity-epico       { color: var(--r-epico);  }
-.card-modal-rarity.rarity-mitico      { color: var(--r-mitico); }
-.card-modal-rarity.rarity-leggendario { color: var(--c-text); font-weight: 700; }
+.card-modal-rarity.rarity-c      { color: var(--r-c); }
+.card-modal-rarity.rarity-r        { color: var(--r-r);   }
+.card-modal-rarity.rarity-m       { color: var(--r-m);  }
+.card-modal-rarity.rarity-s      { color: var(--r-s); }
+.card-modal-rarity.rarity-ss { color: var(--c-text); font-weight: 700; }
 
 .card-modal-stats {
   display: flex;

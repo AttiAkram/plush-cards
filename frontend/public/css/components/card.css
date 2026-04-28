@@ -26,11 +26,11 @@
 }
 
 /* ── Rarity border tints ───────────────────── */
-.card.comune      { border-color: var(--r-comune); }
-.card.raro        { border-color: var(--r-raro);   }
-.card.epico       { border-color: var(--r-epico);  }
-.card.mitico      { border-color: var(--r-mitico); }
-.card.leggendario { border-color: var(--c-text); border-width: 2px; }
+.card.c      { border-color: var(--r-c); }
+.card.r        { border-color: var(--r-r);   }
+.card.m       { border-color: var(--r-m);  }
+.card.s      { border-color: var(--r-s); }
+.card.ss { border-color: var(--c-text); border-width: 2px; }
 
 /* ── Card internals ────────────────────────── */
 .card-image-area {
@@ -131,11 +131,11 @@
 }
 
 /* Rarity badge tint */
-.comune .card-rarity-badge      { color: var(--r-comune); }
-.raro   .card-rarity-badge      { color: var(--r-raro);   }
-.epico  .card-rarity-badge      { color: var(--r-epico);  }
-.mitico .card-rarity-badge      { color: var(--r-mitico); }
-.leggendario .card-rarity-badge { color: var(--c-text); font-weight: 700; }
+.c .card-rarity-badge      { color: var(--r-c); }
+.r   .card-rarity-badge      { color: var(--r-r);   }
+.m  .card-rarity-badge      { color: var(--r-m);  }
+.s .card-rarity-badge      { color: var(--r-s); }
+.ss .card-rarity-badge { color: var(--c-text); font-weight: 700; }
 
 /* Deal animation */
 .card.dealing {

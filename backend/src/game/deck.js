@@ -5,11 +5,11 @@ const store          = require('../store');
 
 /** Copies per rarity for personaggi in the shared deck. */
 const RARITY_COPIES = {
-  comune:      4,
-  raro:        3,
-  epico:       2,
-  mitico:      1,
-  leggendario: 1,
+  c:      4,
+  r:        3,
+  m:       2,
+  s:      1,
+  ss: 1,
 };
 
 /**
