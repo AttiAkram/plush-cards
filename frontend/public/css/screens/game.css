@@ -1109,7 +1109,7 @@
 /* ── Mobile (≤767px) ─────────────────────────────────────────── */
 @media (max-width: 767px) {
   /* Card sizes: readable but compact */
-  :root { --card-w: 64px; --card-h: 88px; }
+  :root { --card-w: 82px; --card-h: 114px; }
 
   /* Board: tight spacing, bottom pad for tuck peek */
   .game-board {
@@ -1156,7 +1156,7 @@
   .opp-focus-pill.active .pill-avatar { background: rgba(255,255,255,0.25); }
 
   /* Single-opponent view */
-  .opponents-area { overflow: hidden; --card-w: 44px; --card-h: 61px; }
+  .opponents-area { overflow: hidden; --card-w: 54px; --card-h: 75px; }
   .opp-zone             { display: none; }
   .opp-zone.opp-focus   { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px; }
   .opp-zone-name        { font-size: 9px; }
@@ -1181,7 +1181,7 @@
   .hand-label  { font-size: 7px; }
 
   /* Nexus card: slightly compact */
-  .nexus-card { width: 78px; height: 108px; }
+  .nexus-card { width: 92px; height: 128px; }
   .nexus-row  { gap: 6px; }
 
   /* Touch drop targets */
@@ -1253,8 +1253,8 @@
 }
 
 @media (max-width: 380px) {
-  :root { --card-w: 56px; --card-h: 78px; }
-  .nexus-card  { width: 68px; height: 94px; }
+  :root { --card-w: 72px; --card-h: 100px; }
+  .nexus-card  { width: 80px; height: 110px; }
   .game-board  { padding: 3px 3px 52px 3px; gap: 2px; }
   #hand-area   { height: 36vh; }
 }
