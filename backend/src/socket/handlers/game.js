@@ -252,7 +252,10 @@ function registerGameHandlers(io, socket) {
       return socket.emit('error_msg', 'Nessun artefatto disponibile nel pool');
     }
 
-    const artifact  = available[Math.floor(Math.random() * available.length)];
+    const artifact      = available[Math.floor(Math.random() * available.length)];
+    // Init artifact HP to match the player's current nexus HP
+    artifact.currentHp  = pState.nexus.hp;
+    artifact.hp         = pState.nexus.maxHp;
     pState.artifactSlot = artifact;
 
     const log = `${username} ottiene l'artefatto: ${artifact.name}`;
@@ -286,10 +289,10 @@ function registerGameHandlers(io, socket) {
     if (nextIdx === 0) gs.turnNumber += 1;
     gs.currentTurn = gs.turnOrder[nextIdx];
 
-    // Natural draw for the new player from the shared deck (before start-of-turn effects)
+    // Natural draw for the new player (rules mode only — campaign draws manually)
     const nextState  = gs.players[gs.currentTurn];
     const drawnUsers = new Set();
-    if (nextState) {
+    if (room.mode !== 'campaign' && nextState) {
       const drawn = gs.deck.pop();
       if (drawn) {
         nextState.hand.push(drawn);
@@ -411,7 +414,15 @@ function registerGameHandlers(io, socket) {
     if (!target)
       return socket.emit('error_msg', 'Bersaglio non trovato sul campo');
 
-    // Artifact targeting rules:
+    // ── Campaign mode: log-only — no damage, no deaths ───────────────────────
+    if (isCampaign) {
+      attacker.haAttaccato = true;
+      const log = `${username} dichiara attacco: ${attacker.name} → ${target.name}`;
+      io.to(roomCode).emit('attack_result', { results: [log], gameState: sanitiseGs(gs) });
+      return;
+    }
+
+    // Artifact targeting rules (rules mode only):
     // - can only attack artifact if no personaggi are on enemy field
     // - GUARDIA_CENTRALE: even with empty field, a card with this passive blocks artifact attacks
     if (isArtifact || target.type === 'artefatto') {
@@ -568,6 +579,11 @@ function registerGameHandlers(io, socket) {
       if (!pState) return socket.emit('error_msg', 'Giocatore non trovato');
       const d = Number(delta) || 0;
       pState.nexus.hp = Math.max(0, pState.nexus.hp + d);
+      // Keep artifact HP in sync with nexus HP
+      if (pState.artifactSlot) {
+        pState.artifactSlot.currentHp = pState.nexus.hp;
+        pState.artifactSlot.hp        = pState.nexus.maxHp;
+      }
       const log = `[${username}] ${target}: vita ${d >= 0 ? '+' : ''}${d} (ora ${pState.nexus.hp})`;
       return io.to(roomCode).emit('manual_edit_applied', { gameState: sanitiseGs(gs), log });
     }
@@ -809,9 +825,13 @@ function registerGameHandlers(io, socket) {
         for (const card of pState.field) {
           if (card) card.currentHp = card.hp;
         }
-        if (pState.artifactSlot) pState.artifactSlot.currentHp = pState.artifactSlot.hp;
+        pState.nexus.hp = pState.nexus.maxHp;
+        if (pState.artifactSlot) {
+          pState.artifactSlot.currentHp = pState.nexus.maxHp;
+          pState.artifactSlot.hp        = pState.nexus.maxHp;
+        }
       }
-      results.push('[GM] HP di tutte le creature ripristinato');
+      results.push('[GM] HP di tutte le creature e del Nexus ripristinato');
 
     } else if (action === 'clear_all_markers') {
       for (const pState of Object.values(gs.players)) {

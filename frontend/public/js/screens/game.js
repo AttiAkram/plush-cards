@@ -1440,6 +1440,8 @@ function initSocketListeners() {
     renderOpponentsArea(newGs);
     renderField(newGs.players[me]?.field ?? [], 'player-field');
     renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
+    const myNexus = newGs.players[me]?.nexus;
+    if (myNexus) updateNexus(myNexus);
     updateZoneCounts(newGs);
     updateEndTurnBtn(newGs);
     $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
@@ -1490,6 +1492,8 @@ function initSocketListeners() {
     renderOpponentsArea(newGs);
     renderField(newGs.players[me]?.field ?? [], 'player-field');
     renderArtifactSlot(newGs.players[me]?.artifactSlot ?? null, 'player-artifact-slot');
+    const myNexus = newGs.players[me]?.nexus;
+    if (myNexus) updateNexus(myNexus);
     updateZoneCounts(newGs);
     $('deck-count').textContent = `${newGs.deckCount ?? 0} carte`;
     for (const uname of Object.keys(newGs.players)) refreshPanelIfOpen(uname, newGs);
